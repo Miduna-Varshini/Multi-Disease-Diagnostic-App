@@ -153,4 +153,3 @@ if st.button("Predict"):
 
     pred = model.predict(input_scaled)[0]
     st.success(f"Prediction: {'Disease Detected' if pred == 1 else 'No Disease'}")
-``
