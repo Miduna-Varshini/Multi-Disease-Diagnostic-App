@@ -1,6 +1,8 @@
 import streamlit as st
 import pickle
 import numpy as np
+from fpdf import FPDF
+from datetime import datetime
 
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
@@ -11,6 +13,8 @@ if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
+if 'report' not in st.session_state:
+    st.session_state['report'] = []
 
 # ===================== MODEL LOADER =====================
 @st.cache_resource
@@ -25,6 +29,20 @@ def load_model(path, default_features=[]):
         scaler = data['scaler']
         features = data['features']
     return model, scaler, features
+
+# ===================== PDF GENERATOR =====================
+def create_pdf(report_list, filename="diagnosis_report.pdf"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "🩺 Multi-Disease Diagnostic Report", ln=True, align="C")
+    pdf.ln(10)
+    pdf.set_font("Arial", "", 12)
+    for r in report_list:
+        pdf.multi_cell(0, 8, r)
+        pdf.ln(2)
+    pdf.output(filename)
+    return filename
 
 # ===================== SIGNUP =====================
 def signup():
@@ -51,6 +69,7 @@ def login():
             st.session_state['logged_in'] = True
             st.session_state['current_user'] = username
             st.session_state['page'] = 'Home'
+            st.session_state['report'] = []  # clear previous reports
         else:
             st.error("Invalid username or password")
 
@@ -59,7 +78,6 @@ def home_dashboard():
     st.title("🩺 Multi-Disease Diagnostic Portal")
     st.write(f"Welcome **{st.session_state['current_user']}**! Select a disease below:")
 
-    # Flexbox-like layout using columns
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("❤️ Heart", key="btn_heart"):
@@ -84,6 +102,15 @@ def home_dashboard():
         st.session_state['current_user'] = None
         st.session_state['page'] = 'Login'
 
+# ===================== PREDICTION FUNCTION =====================
+def predict_disease(model_path, X, disease_name):
+    model, scaler, _ = load_model(model_path)
+    X_scaled = scaler.transform(X)
+    pred = model.predict(X_scaled)[0]
+    result = f"{disease_name} Result: {'Detected ⚠️' if pred==1 else 'Not Detected ✅'}"
+    st.success(result if pred==0 else result)
+    st.session_state['report'].append(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} - {result}")
+
 # ===================== HEART PAGE =====================
 def heart_page():
     st.header("❤️ Heart Disease Prediction")
@@ -102,14 +129,13 @@ def heart_page():
     thal = st.number_input("Thalassemia (1,2,3)",1,3,2, key="heart_thal")
 
     if st.button("Predict Heart Disease", key="heart_predict"):
-        model, scaler, FEATURES = load_model("models/heart_model.pkl", [])
         X = np.array([[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal]])
-        X_scaled = scaler.transform(X)
-        pred = model.predict(X_scaled)[0]
-        if pred==1:
-            st.error("⚠️ Heart Disease Detected")
-        else:
-            st.success("✅ No Heart Disease")
+        predict_disease("models/heart_model.pkl", X, "Heart Disease")
+
+    if st.session_state['report']:
+        if st.button("Download Report as PDF", key="heart_pdf"):
+            pdf_file = create_pdf(st.session_state['report'])
+            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
 
     st.button("Back", key="heart_back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
@@ -126,14 +152,13 @@ def diabetes_page():
     age = st.number_input("Age",1,120,32, key="dia_age")
 
     if st.button("Predict Diabetes", key="dia_predict"):
-        model, scaler, FEATURES = load_model("models/diabetes_model.pkl", [])
         X = np.array([[preg, glucose, bp, skin, insulin, bmi, dpf, age]])
-        X_scaled = scaler.transform(X)
-        pred = model.predict(X_scaled)[0]
-        if pred==1:
-            st.error("⚠️ Diabetes Detected")
-        else:
-            st.success("✅ No Diabetes")
+        predict_disease("models/diabetes_model.pkl", X, "Diabetes")
+
+    if st.session_state['report']:
+        if st.button("Download Report as PDF", key="dia_pdf"):
+            pdf_file = create_pdf(st.session_state['report'])
+            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
 
     st.button("Back", key="dia_back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
@@ -141,16 +166,28 @@ def diabetes_page():
 def brain_page():
     st.header("🧠 Brain Tumor Detection")
     st.info("You can integrate your brain tumor .h5 model here.")
+    if st.session_state['report']:
+        if st.button("Download Report as PDF", key="brain_pdf"):
+            pdf_file = create_pdf(st.session_state['report'])
+            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
     st.button("Back", key="brain_back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
 def kidney_page():
     st.header("🟣 Kidney Disease Prediction")
     st.info("You can integrate your kidney .pkl model here.")
+    if st.session_state['report']:
+        if st.button("Download Report as PDF", key="kidney_pdf"):
+            pdf_file = create_pdf(st.session_state['report'])
+            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
     st.button("Back", key="kidney_back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
 def liver_page():
     st.header("🟠 Liver Disease Prediction")
     st.info("You can integrate your liver .pkl model here.")
+    if st.session_state['report']:
+        if st.button("Download Report as PDF", key="liver_pdf"):
+            pdf_file = create_pdf(st.session_state['report'])
+            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
     st.button("Back", key="liver_back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
 # ===================== MAIN PAGE CONTROL =====================
