@@ -30,19 +30,22 @@ def load_model(path, default_features=[]):
         features = data['features']
     return model, scaler, features
 
-# ===================== PDF GENERATOR =====================
-def create_pdf(report_list, filename="diagnosis_report.pdf"):
+# ===================== PDF GENERATOR ===================== #
+
+from fpdf import FPDF
+
+def create_pdf(report_text, filename="report.pdf"):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "🩺 Multi-Disease Diagnostic Report", ln=True, align="C")
-    pdf.ln(10)
-    pdf.set_font("Arial", "", 12)
-    for r in report_list:
-        pdf.multi_cell(0, 8, r)
-        pdf.ln(2)
+    pdf.set_font("Arial", size=12)
+
+    # Remove non-ASCII characters
+    safe_text = report_text.encode("latin1", "ignore").decode("latin1")
+    pdf.multi_cell(0, 10, safe_text)
+
     pdf.output(filename)
     return filename
+
 
 # ===================== SIGNUP =====================
 def signup():
