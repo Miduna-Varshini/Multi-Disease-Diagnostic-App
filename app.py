@@ -82,21 +82,22 @@ def login():
 # ===================== HOME DASHBOARD =====================
 # ===================== IMPROVED HOME DASHBOARD =====================
 # ===================== DASHBOARD-STYLE HOME PAGE =====================
+# ===================== FULL-WIDTH DASHBOARD-STYLE HOME PAGE =====================
 def home_dashboard():
     st.markdown(
         """
         <style>
-        /* Main container */
+        /* Container */
         .dashboard-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
+            padding: 0 10px;
         }
         /* Card style */
         .card {
-            width: 260px;
-            height: 100px;
+            width: 100%;
+            height: 120px;
             border-radius: 15px;
             color: white;
             padding: 20px;
@@ -109,11 +110,11 @@ def home_dashboard():
             text-align: left;
         }
         .card:hover {
-            transform: scale(1.05);
+            transform: scale(1.03);
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
         .card-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             margin-bottom: 5px;
         }
@@ -121,20 +122,24 @@ def home_dashboard():
             font-size: 14px;
             opacity: 0.9;
         }
+        /* Colors */
         .card-heart { background: linear-gradient(135deg, #f87171, #ef4444); }
         .card-diabetes { background: linear-gradient(135deg, #f472b6, #ec4899); }
         .card-brain { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
         .card-kidney { background: linear-gradient(135deg, #c4b5fd, #7c3aed); }
         .card-liver { background: linear-gradient(135deg, #fb923c, #f97316); }
+        /* Logout button */
         .logout-btn {
             background-color: #ef4444;
             color: white;
             border-radius: 10px;
-            padding: 10px 20px;
+            padding: 15px;
             font-weight: bold;
             margin-top: 20px;
             border: none;
             cursor: pointer;
+            width: 100%;
+            text-align: center;
         }
         .logout-btn:hover {
             background-color: #b91c1c;
@@ -153,65 +158,45 @@ def home_dashboard():
     if st.button("❤️ Heart", key="heart_card"):
         st.session_state['page'] = 'Heart'
     st.markdown(
-        """
-        <div class="card card-heart">
-            <div class="card-title">❤️ Heart</div>
-            <div class="card-subtitle">Predict Heart Disease</div>
-        </div>
-        """, unsafe_allow_html=True
+        '<div class="card card-heart"><div class="card-title">❤️ Heart</div><div class="card-subtitle">Predict Heart Disease</div></div>',
+        unsafe_allow_html=True
     )
 
     # Diabetes Card
     if st.button("🩸 Diabetes", key="diabetes_card"):
         st.session_state['page'] = 'Diabetes'
     st.markdown(
-        """
-        <div class="card card-diabetes">
-            <div class="card-title">🩸 Diabetes</div>
-            <div class="card-subtitle">Predict Diabetes</div>
-        </div>
-        """, unsafe_allow_html=True
+        '<div class="card card-diabetes"><div class="card-title">🩸 Diabetes</div><div class="card-subtitle">Predict Diabetes</div></div>',
+        unsafe_allow_html=True
     )
 
     # Brain Tumor Card
     if st.button("🧠 Brain Tumor", key="brain_card"):
         st.session_state['page'] = 'Brain'
     st.markdown(
-        """
-        <div class="card card-brain">
-            <div class="card-title">🧠 Brain Tumor</div>
-            <div class="card-subtitle">Predict Brain Tumor</div>
-        </div>
-        """, unsafe_allow_html=True
+        '<div class="card card-brain"><div class="card-title">🧠 Brain Tumor</div><div class="card-subtitle">Predict Brain Tumor</div></div>',
+        unsafe_allow_html=True
     )
 
     # Kidney Card
     if st.button("🟣 Kidney", key="kidney_card"):
         st.session_state['page'] = 'Kidney'
     st.markdown(
-        """
-        <div class="card card-kidney">
-            <div class="card-title">🟣 Kidney</div>
-            <div class="card-subtitle">Predict Kidney Disease</div>
-        </div>
-        """, unsafe_allow_html=True
+        '<div class="card card-kidney"><div class="card-title">🟣 Kidney</div><div class="card-subtitle">Predict Kidney Disease</div></div>',
+        unsafe_allow_html=True
     )
 
     # Liver Card
     if st.button("🟠 Liver", key="liver_card"):
         st.session_state['page'] = 'Liver'
     st.markdown(
-        """
-        <div class="card card-liver">
-            <div class="card-title">🟠 Liver</div>
-            <div class="card-subtitle">Predict Liver Disease</div>
-        </div>
-        """, unsafe_allow_html=True
+        '<div class="card card-liver"><div class="card-title">🟠 Liver</div><div class="card-subtitle">Predict Liver Disease</div></div>',
+        unsafe_allow_html=True
     )
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Logout
+    # Logout button full width
     if st.button("Logout", key="logout_card"):
         st.session_state['logged_in'] = False
         st.session_state['current_user'] = None
