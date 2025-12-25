@@ -1,23 +1,15 @@
 import streamlit as st
 import pickle
 import pandas as pd
+
 # Inject custom CSS
 st.markdown("""
     <style>
-    /* Sidebar styling */
     [data-testid="stSidebar"] {
         background-color: #f0f4f8;
         padding: 20px;
         border-right: 2px solid #d0d7de;
     }
-
-    /* Main title */
-    .stApp header {
-        background-color: #ffffff;
-        padding: 10px;
-        border-bottom: 2px solid #d0d7de;
-    }
-
     h1 {
         color: #2c3e50;
         font-size: 2.2em;
@@ -25,14 +17,10 @@ st.markdown("""
         text-align: center;
         margin-bottom: 20px;
     }
-
-    /* Subheaders */
     h2, h3 {
         color: #34495e;
         font-weight: 600;
     }
-
-    /* Input fields */
     .stTextInput > div > input,
     .stNumberInput > div > input,
     .stSelectbox > div > div {
@@ -42,8 +30,6 @@ st.markdown("""
         padding: 8px;
         font-size: 16px;
     }
-
-    /* Predict button */
     button[kind="primary"] {
         background-color: #2ecc71;
         color: white;
@@ -52,13 +38,10 @@ st.markdown("""
         padding: 10px 20px;
         margin-top: 20px;
     }
-
     button[kind="primary"]:hover {
         background-color: #27ae60;
         color: white;
     }
-
-    /* Success message */
     .stAlert-success {
         background-color: #d4edda;
         border-left: 5px solid #28a745;
@@ -76,6 +59,19 @@ MODELS = {
     "Liver": "models/liver_model.pkl",
     "Heart": "models/heart_model.pkl",
     "Diabetes": "models/diabetes_model.pkl"
+}
+
+# Manual feature schemas
+FEATURES = {
+    "Kidney": ["age", "bp", "sg", "al", "su"],
+    "Liver": ["Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",
+              "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Proteins",
+              "Albumin", "Albumin_and_Globulin_Ratio"],
+    "Heart": ["Age", "Sex", "Chest pain type", "BP", "Cholesterol",
+              "FBS over 120", "EKG results", "Max HR", "Exercise angina",
+              "ST depression", "Slope of ST", "Number of vessels fluro", "Thallium"],
+    "Diabetes": ["Pregnancies", "Glucose", "BloodPressure", "SkinThickness",
+                 "Insulin", "BMI", "DiabetesPedigreeFunction", "Age"]
 }
 
 st.title("🩺 Multi-Disease Prediction Portal")
@@ -103,7 +99,6 @@ if disease == "Kidney":
     input_data["sg"] = st.number_input("Specific Gravity", 1.0, 1.05, 1.02)
     input_data["al"] = st.number_input("Albumin", 0, 5, 1)
     input_data["su"] = st.number_input("Sugar", 0, 5, 0)
-    # Add other kidney features as needed...
 
 elif disease == "Liver":
     input_data["Age"] = st.number_input("Age", 1, 120, 45)
@@ -147,7 +142,8 @@ elif disease == "Diabetes":
 # =========================
 if st.button("Predict"):
     input_df = pd.DataFrame([input_data])
-    input_df = input_df.reindex(columns=model.feature_names_in_, fill_value=0)
+    # Use manual schema instead of model.feature_names_in_
+    input_df = input_df.reindex(columns=FEATURES[disease], fill_value=0)
     input_scaled = scaler.transform(input_df)
     pred = model.predict(input_scaled)[0]
     st.success(f"Prediction: {'Disease Detected' if pred == 1 else 'No Disease'}")
