@@ -1,20 +1,20 @@
 import streamlit as st
-import pickle
 import numpy as np
+import pickle
+import io
 from fpdf import FPDF
-from datetime import datetime
 
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
     st.session_state['page'] = 'Signup'
 if 'users' not in st.session_state:
-    st.session_state['users'] = {}  # simple user storage
+    st.session_state['users'] = {}
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
 if 'report' not in st.session_state:
-    st.session_state['report'] = []
+    st.session_state['report'] = ""
 
 # ===================== MODEL LOADER =====================
 @st.cache_resource
@@ -30,29 +30,24 @@ def load_model(path, default_features=[]):
         features = data['features']
     return model, scaler, features
 
-# ===================== PDF GENERATOR ===================== #
-
-from fpdf import FPDF
-
-def create_pdf(report_text, filename="report.pdf"):
+# ===================== PDF CREATOR =====================
+def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-
-    # Remove non-ASCII characters
-    safe_text = report_text.encode("latin1", "ignore").decode("latin1")
+    safe_text = text.encode("latin1", "ignore").decode("latin1")
     pdf.multi_cell(0, 10, safe_text)
-
-    pdf.output(filename)
-    return filename
-
+    pdf_bytes = io.BytesIO()
+    pdf.output(pdf_bytes)
+    pdf_bytes.seek(0)
+    return pdf_bytes
 
 # ===================== SIGNUP =====================
 def signup():
     st.title("📝 Signup")
-    username = st.text_input("Enter username", key="signup_user")
-    password = st.text_input("Enter password", type="password", key="signup_pass")
-    if st.button("Signup", key="signup_btn"):
+    username = st.text_input("Enter username")
+    password = st.text_input("Enter password", type="password")
+    if st.button("Signup"):
         if username in st.session_state['users']:
             st.error("Username already exists!")
         elif username == "" or password == "":
@@ -65,14 +60,13 @@ def signup():
 # ===================== LOGIN =====================
 def login():
     st.title("🔑 Login")
-    username = st.text_input("Username", key="login_user")
-    password = st.text_input("Password", type="password", key="login_pass")
-    if st.button("Login", key="login_btn"):
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
         if username in st.session_state['users'] and st.session_state['users'][username] == password:
             st.session_state['logged_in'] = True
             st.session_state['current_user'] = username
             st.session_state['page'] = 'Home'
-            st.session_state['report'] = []  # clear previous reports
         else:
             st.error("Invalid username or password")
 
@@ -81,117 +75,116 @@ def home_dashboard():
     st.title("🩺 Multi-Disease Diagnostic Portal")
     st.write(f"Welcome **{st.session_state['current_user']}**! Select a disease below:")
 
+    # flex-box like layout using columns
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("❤️ Heart", key="btn_heart"):
+        if st.button("❤️ Heart"):
             st.session_state['page'] = 'Heart'
     with col2:
-        if st.button("🩸 Diabetes", key="btn_diabetes"):
+        if st.button("🩸 Diabetes"):
             st.session_state['page'] = 'Diabetes'
     with col3:
-        if st.button("🧠 Brain", key="btn_brain"):
+        if st.button("🧠 Brain"):
             st.session_state['page'] = 'Brain'
-
     col4, col5 = st.columns(2)
     with col4:
-        if st.button("🟣 Kidney", key="btn_kidney"):
+        if st.button("🟣 Kidney"):
             st.session_state['page'] = 'Kidney'
     with col5:
-        if st.button("🟠 Liver", key="btn_liver"):
+        if st.button("🟠 Liver"):
             st.session_state['page'] = 'Liver'
 
-    if st.button("Logout", key="btn_logout"):
+    if st.button("Logout"):
         st.session_state['logged_in'] = False
         st.session_state['current_user'] = None
         st.session_state['page'] = 'Login'
 
-# ===================== PREDICTION FUNCTION =====================
-def predict_disease(model_path, X, disease_name):
-    model, scaler, _ = load_model(model_path)
-    X_scaled = scaler.transform(X)
-    pred = model.predict(X_scaled)[0]
-    result = f"{disease_name} Result: {'Detected ⚠️' if pred==1 else 'Not Detected ✅'}"
-    st.success(result if pred==0 else result)
-    st.session_state['report'].append(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} - {result}")
+# ===================== PREDICTION PAGE TEMPLATE =====================
+def disease_page(title, model_path, features, input_func):
+    st.header(title)
+    inputs = input_func()
+    if st.button(f"Predict {title}"):
+        model, scaler, _ = load_model(model_path, features)
+        X = np.array([inputs])
+        X_scaled = scaler.transform(X)
+        pred = model.predict(X_scaled)[0]
 
-# ===================== HEART PAGE =====================
-def heart_page():
-    st.header("❤️ Heart Disease Prediction")
-    age = st.number_input("Age", 0, 120, 52, key="heart_age")
-    sex = st.selectbox("Sex (0=Female, 1=Male)", [0,1], key="heart_sex")
-    cp = st.number_input("Chest Pain Type (0-3)", 0, 3, 0, key="heart_cp")
-    trestbps = st.number_input("BP", 80, 200, 120, key="heart_bp")
-    chol = st.number_input("Cholesterol", 100, 600, 240, key="heart_chol")
-    fbs = st.selectbox("FBS > 120", [0,1], key="heart_fbs")
-    restecg = st.number_input("Rest ECG (0-2)", 0,2,1, key="heart_restecg")
-    thalach = st.number_input("Max HR", 60,250,150, key="heart_thalach")
-    exang = st.selectbox("Exercise angina", [0,1], key="heart_exang")
-    oldpeak = st.number_input("ST Depression",0.0,10.0,1.2, key="heart_oldpeak")
-    slope = st.number_input("Slope ST",0,2,1, key="heart_slope")
-    ca = st.number_input("Number of vessels",0,3,0, key="heart_ca")
-    thal = st.number_input("Thalassemia (1,2,3)",1,3,2, key="heart_thal")
+        result_text = f"{title} Prediction Result: {'⚠️ Detected' if pred==1 else '✅ Not Detected'}"
+        if pred == 1:
+            st.error(result_text)
+        else:
+            st.success(result_text)
 
-    if st.button("Predict Heart Disease", key="heart_predict"):
-        X = np.array([[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal]])
-        predict_disease("models/heart_model.pkl", X, "Heart Disease")
+        # Save to session and create PDF
+        st.session_state['report'] = result_text
+        pdf_file = create_pdf(st.session_state['report'])
+        st.download_button(
+            label="📄 Download PDF Report",
+            data=pdf_file,
+            file_name=f"{title.replace(' ', '_')}_Report.pdf",
+            mime="application/pdf"
+        )
 
-    if st.session_state['report']:
-        if st.button("Download Report as PDF", key="heart_pdf"):
-            pdf_file = create_pdf(st.session_state['report'])
-            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
+    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
-    st.button("Back", key="heart_back", on_click=lambda: st.session_state.update({'page':'Home'}))
+# ===================== INPUT FUNCTIONS =====================
+def heart_inputs():
+    age = st.number_input("Age", 0, 120, 52)
+    sex = st.selectbox("Sex (0=Female, 1=Male)", [0,1])
+    cp = st.number_input("Chest Pain Type (0-3)", 0,3,0)
+    trestbps = st.number_input("BP", 80,200,120)
+    chol = st.number_input("Cholesterol", 100,600,240)
+    fbs = st.selectbox("FBS > 120", [0,1])
+    restecg = st.number_input("Rest ECG (0-2)", 0,2,1)
+    thalach = st.number_input("Max HR", 60,250,150)
+    exang = st.selectbox("Exercise angina", [0,1])
+    oldpeak = st.number_input("ST Depression",0.0,10.0,1.2)
+    slope = st.number_input("Slope ST",0,2,1)
+    ca = st.number_input("Number of vessels",0,3,0)
+    thal = st.number_input("Thalassemia (1,2,3)",1,3,2)
+    return [age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal]
 
-# ===================== DIABETES PAGE =====================
-def diabetes_page():
-    st.header("🩸 Diabetes Prediction")
-    preg = st.number_input("Pregnancies",0,20,2, key="dia_preg")
-    glucose = st.number_input("Glucose",0,300,120, key="dia_glucose")
-    bp = st.number_input("BP",0,200,70, key="dia_bp")
-    skin = st.number_input("Skin Thickness",0,100,20, key="dia_skin")
-    insulin = st.number_input("Insulin",0,900,85, key="dia_insulin")
-    bmi = st.number_input("BMI",0.0,70.0,28.5, key="dia_bmi")
-    dpf = st.number_input("DPF",0.0,3.0,0.5, key="dia_dpf")
-    age = st.number_input("Age",1,120,32, key="dia_age")
+def diabetes_inputs():
+    preg = st.number_input("Pregnancies",0,20,2)
+    glucose = st.number_input("Glucose",0,300,120)
+    bp = st.number_input("BP",0,200,70)
+    skin = st.number_input("Skin Thickness",0,100,20)
+    insulin = st.number_input("Insulin",0,900,85)
+    bmi = st.number_input("BMI",0.0,70.0,28.5)
+    dpf = st.number_input("DPF",0.0,3.0,0.5)
+    age = st.number_input("Age",1,120,32)
+    return [preg, glucose, bp, skin, insulin, bmi, dpf, age]
 
-    if st.button("Predict Diabetes", key="dia_predict"):
-        X = np.array([[preg, glucose, bp, skin, insulin, bmi, dpf, age]])
-        predict_disease("models/diabetes_model.pkl", X, "Diabetes")
+def kidney_inputs():
+    age = st.number_input("Age",0,120,45)
+    bp = st.number_input("BP",0,200,80)
+    sg = st.number_input("Specific Gravity",1.0,1.05,1.02)
+    al = st.number_input("Albumin",0,5,0)
+    su = st.number_input("Sugar",0,5,0)
+    bgr = st.number_input("Blood Glucose Random",0,500,110)
+    bu = st.number_input("Blood Urea",0,200,25)
+    sc = st.number_input("Serum Creatinine",0.0,20.0,1.0)
+    hemo = st.number_input("Hemoglobin",0.0,20.0,15.2)
+    pcv = st.number_input("PCV",0,60,44)
+    return [age, bp, sg, al, su, bgr, bu, sc, hemo, pcv]
 
-    if st.session_state['report']:
-        if st.button("Download Report as PDF", key="dia_pdf"):
-            pdf_file = create_pdf(st.session_state['report'])
-            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
+def liver_inputs():
+    age = st.number_input("Age",1,120,45)
+    gender = st.selectbox("Gender", ["Male","Female"])
+    gender_val = 1 if gender=="Male" else 0
+    total_bilirubin = st.number_input("Total Bilirubin",0.0,10.0,1.3)
+    direct_bilirubin = st.number_input("Direct Bilirubin",0.0,5.0,0.4)
+    alk_phos = st.number_input("Alkaline Phosphotase",50,2000,210)
+    alt = st.number_input("ALT",1,2000,35)
+    ast = st.number_input("AST",1,2000,40)
+    total_proteins = st.number_input("Total Proteins",1.0,10.0,6.8)
+    albumin = st.number_input("Albumin",1.0,6.0,3.1)
+    ag_ratio = st.number_input("Albumin/Globulin Ratio",0.0,3.0,0.9)
+    return [age, gender_val, total_bilirubin, direct_bilirubin, alk_phos, alt, ast, total_proteins, albumin, ag_ratio]
 
-    st.button("Back", key="dia_back", on_click=lambda: st.session_state.update({'page':'Home'}))
-
-# ===================== PLACEHOLDER PAGES =====================
-def brain_page():
-    st.header("🧠 Brain Tumor Detection")
-    st.info("You can integrate your brain tumor .h5 model here.")
-    if st.session_state['report']:
-        if st.button("Download Report as PDF", key="brain_pdf"):
-            pdf_file = create_pdf(st.session_state['report'])
-            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
-    st.button("Back", key="brain_back", on_click=lambda: st.session_state.update({'page':'Home'}))
-
-def kidney_page():
-    st.header("🟣 Kidney Disease Prediction")
-    st.info("You can integrate your kidney .pkl model here.")
-    if st.session_state['report']:
-        if st.button("Download Report as PDF", key="kidney_pdf"):
-            pdf_file = create_pdf(st.session_state['report'])
-            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
-    st.button("Back", key="kidney_back", on_click=lambda: st.session_state.update({'page':'Home'}))
-
-def liver_page():
-    st.header("🟠 Liver Disease Prediction")
-    st.info("You can integrate your liver .pkl model here.")
-    if st.session_state['report']:
-        if st.button("Download Report as PDF", key="liver_pdf"):
-            pdf_file = create_pdf(st.session_state['report'])
-            st.download_button("Download PDF", pdf_file, file_name="diagnosis_report.pdf")
-    st.button("Back", key="liver_back", on_click=lambda: st.session_state.update({'page':'Home'}))
+def brain_inputs():
+    st.warning("Brain tumor prediction requires image input (not implemented in this template).")
+    return [0]  # placeholder
 
 # ===================== MAIN PAGE CONTROL =====================
 if st.session_state['page'] == 'Signup':
@@ -201,12 +194,12 @@ elif st.session_state['page'] == 'Login':
 elif st.session_state['page'] == 'Home':
     home_dashboard()
 elif st.session_state['page'] == 'Heart':
-    heart_page()
+    disease_page("Heart Disease", "models/heart_model.pkl", [], heart_inputs)
 elif st.session_state['page'] == 'Diabetes':
-    diabetes_page()
-elif st.session_state['page'] == 'Brain':
-    brain_page()
+    disease_page("Diabetes", "models/diabetes_model.pkl", [], diabetes_inputs)
 elif st.session_state['page'] == 'Kidney':
-    kidney_page()
+    disease_page("Kidney Disease", "models/kidney_model.pkl", [], kidney_inputs)
 elif st.session_state['page'] == 'Liver':
-    liver_page()
+    disease_page("Liver Disease", "models/liver_model.pkl", [], liver_inputs)
+elif st.session_state['page'] == 'Brain':
+    disease_page("Brain Tumor", "models/brain_model.pkl", [], brain_inputs)
