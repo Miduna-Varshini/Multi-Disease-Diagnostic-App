@@ -10,9 +10,18 @@ st.title("❤️ Heart Disease Prediction (13 Features)")
 def load_model():
     with open("models/heart_model.pkl", "rb") as f:
         data = pickle.load(f)
-    model = data["model"]
-    scaler = data["scaler"]
-    features = data["features"]
+    # Handle both tuple and dict formats
+    if isinstance(data, tuple):
+        model, scaler = data
+        features = [
+            "Age", "Sex", "Chest pain type", "BP", "Cholesterol",
+            "FBS over 120", "EKG results", "Max HR", "Exercise angina",
+            "ST depression", "Slope of ST", "Number of vessels fluro", "Thallium"
+        ]
+    else:
+        model = data["model"]
+        scaler = data["scaler"]
+        features = data["features"]
     return model, scaler, features
 
 model, scaler, FEATURES = load_model()
