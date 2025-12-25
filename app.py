@@ -65,7 +65,7 @@ MODELS = {
 
 # Manual feature schemas (must match training dataset order!)
 FEATURES = {
-    "Kidney": ["age", "bp", "sg", "al", "su"],
+    "Kidney": ["age", "bp", "sg", "al", "su"],  # extend if trained with more features
     "Liver": ["Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",
               "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Proteins",
               "Albumin", "Albumin_and_Globulin_Ratio"],
@@ -104,7 +104,9 @@ if disease == "Kidney":
 
 elif disease == "Liver":
     input_data["Age"] = st.number_input("Age", 1, 120, 45)
-    input_data["Gender"] = st.selectbox("Gender", ["Male", "Female"])
+    gender = st.selectbox("Gender", ["Male", "Female"])
+    # Encode gender as numeric (must match training)
+    input_data["Gender"] = 1 if gender == "Male" else 0
     input_data["Total_Bilirubin"] = st.number_input("Total Bilirubin", 0.0, 10.0, 1.3)
     input_data["Direct_Bilirubin"] = st.number_input("Direct Bilirubin", 0.0, 5.0, 0.4)
     input_data["Alkaline_Phosphotase"] = st.number_input("Alkaline Phosphotase", 50, 2000, 210)
@@ -151,3 +153,4 @@ if st.button("Predict"):
 
     pred = model.predict(input_scaled)[0]
     st.success(f"Prediction: {'Disease Detected' if pred == 1 else 'No Disease'}")
+``
