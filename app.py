@@ -3,88 +3,61 @@ import pickle
 import pandas as pd
 
 # =========================
-# Custom CSS
+# Custom CSS (single-quoted, no triple-backticks)
 # =========================
-st.markdown("""
-    <style>
-    [data-testid="stSidebar"] {
-        background-color: #f0f4f8;
-        padding: 20px;
-        border-right: 2px solid #d0d7de;
-    }
-    h1 {
-        color: #2c3e50;
-        font-size: 2.2em;
-        font-weight: 700;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    h2, h3 {
-        color: #34495e;
-        font-weight: 600;
-    }
-    .stTextInput > div > input,
-    .stNumberInput > div > input,
-    .stSelectbox > div > div {
-        background-color: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 6px;
-        padding: 8px;
-        font-size: 16px;
-    }
-    button[kind="primary"] {
-        background-color: #2ecc71;
-        color: white;
-        font-weight: bold;
-        border-radius: 8px;
-        padding: 10px 20px;
-        margin-top: 20px;
-    }
-    button[kind="primary"]:hover {
-        background-color: #27ae60;
-        color: white;
-    }
-    .stAlert-success {
-        background-color: #d4edda;
-        border-left: 5px solid #28a745;
-        color: #155724;
-        font-weight: 600;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.markdown(
+    '<style>'
+    '[data-testid="stSidebar"] {background-color: #f0f4f8; padding: 20px; border-right: 2px solid #d0d7de;}'
+    'h1 {color: #2c3e50; font-size: 2.2em; font-weight: 700; text-align: center; margin-bottom: 20px;}'
+    'h2, h3 {color: #34495e; font-weight: 600;}'
+    '.stTextInput > div > input, .stNumberInput > div > input, .stSelectbox > div > div {'
+    '  background-color: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px; font-size: 16px;}'
+    'button[kind="primary"] {background-color: #2ecc71; color: white; font-weight: bold; border-radius: 8px; padding: 10px 20px; margin-top: 20px;}'
+    'button[kind="primary"]:hover {background-color: #27ae60; color: white;}'
+    '.stAlert-success {background-color: #d4edda; border-left: 5px solid #28a745; color: #155724; font-weight: 600;}'
+    '</style>',
+    unsafe_allow_html=True
+)
 
 # =========================
-# Load models
+# Paths to your pickled models
 # =========================
 MODELS = {
     "Kidney": "models/kidney_model.pkl",
     "Liver": "models/liver_model.pkl",
     "Heart": "models/heart_model.pkl",
-    "Diabetes": "models/diabetes_model.pkl"
+    "Diabetes": "models/diabetes_model.pkl",
 }
 
-# Manual feature schemas (must match training dataset order!)
+# =========================
+# Manual feature schemas (order must match training)
+# =========================
 FEATURES = {
-    "Kidney": ["age", "bp", "sg", "al", "su"],  # extend if trained with more features
-    "Liver": ["Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",
-              "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Proteins",
-              "Albumin", "Albumin_and_Globulin_Ratio"],
-    "Heart": ["Age", "Sex", "Chest pain type", "BP", "Cholesterol",
-              "FBS over 120", "EKG results", "Max HR", "Exercise angina",
-              "ST depression", "Slope of ST", "Number of vessels fluro", "Thallium"],
-    "Diabetes": ["Pregnancies", "Glucose", "BloodPressure", "SkinThickness",
-                 "Insulin", "BMI", "DiabetesPedigreeFunction", "Age"]
+    "Kidney": ["age", "bp", "sg", "al", "su"],  # extend if you trained with more features
+    "Liver": [
+        "Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",
+        "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Proteins",
+        "Albumin", "Albumin_and_Globulin_Ratio"
+    ],
+    "Heart": [
+        "Age", "Sex", "Chest pain type", "BP", "Cholesterol",
+        "FBS over 120", "EKG results", "Max HR", "Exercise angina",
+        "ST depression", "Slope of ST", "Number of vessels fluro", "Thallium"
+    ],
+    "Diabetes": [
+        "Pregnancies", "Glucose", "BloodPressure", "SkinThickness",
+        "Insulin", "BMI", "DiabetesPedigreeFunction", "Age"
+    ],
 }
 
 st.title("🩺 Multi-Disease Prediction Portal")
 st.write("Select a disease type, enter patient details, and get prediction results.")
 
 # =========================
-# Disease selector
+# Disease selector and model loader
 # =========================
 disease = st.selectbox("Choose a disease to predict:", list(MODELS.keys()))
 
-# Load chosen model
 with open(MODELS[disease], "rb") as f:
     model, scaler = pickle.load(f)
 
@@ -104,9 +77,9 @@ if disease == "Kidney":
 
 elif disease == "Liver":
     input_data["Age"] = st.number_input("Age", 1, 120, 45)
-    gender = st.selectbox("Gender", ["Male", "Female"])
-    # Encode gender as numeric (must match training)
-    input_data["Gender"] = 1 if gender == "Male" else 0
+    gender_str = st.selectbox("Gender", ["Male", "Female"])
+    # Encode gender numerically to match training
+    input_data["Gender"] = 1 if gender_str == "Male" else 0
     input_data["Total_Bilirubin"] = st.number_input("Total Bilirubin", 0.0, 10.0, 1.3)
     input_data["Direct_Bilirubin"] = st.number_input("Direct Bilirubin", 0.0, 5.0, 0.4)
     input_data["Alkaline_Phosphotase"] = st.number_input("Alkaline Phosphotase", 50, 2000, 210)
@@ -118,7 +91,7 @@ elif disease == "Liver":
 
 elif disease == "Heart":
     input_data["Age"] = st.number_input("Age", 1, 120, 52)
-    input_data["Sex"] = st.selectbox("Sex", [0, 1])  # 0 = Female, 1 = Male
+    input_data["Sex"] = st.selectbox("Sex (0=Female, 1=Male)", [0, 1])
     input_data["Chest pain type"] = st.number_input("Chest Pain Type", 0, 4, 0)
     input_data["BP"] = st.number_input("Blood Pressure", 50, 200, 120)
     input_data["Cholesterol"] = st.number_input("Cholesterol", 100, 600, 240)
@@ -145,11 +118,11 @@ elif disease == "Diabetes":
 # Prediction
 # =========================
 if st.button("Predict"):
-    input_df = pd.DataFrame([input_data])
-    input_df = input_df.reindex(columns=FEATURES[disease], fill_value=0)
+    # Align to fixed schema and fill missing with zeros
+    input_df = pd.DataFrame([input_data]).reindex(columns=FEATURES[disease], fill_value=0)
 
-    # FIX: use .values to avoid feature name mismatch error
+    # Use raw values so scaler ignores column names (prevents ValueError)
     input_scaled = scaler.transform(input_df.values)
 
-    pred = model.predict(input_scaled)[0]
+    pred = int(model.predict(input_scaled)[0])
     st.success(f"Prediction: {'Disease Detected' if pred == 1 else 'No Disease'}")
