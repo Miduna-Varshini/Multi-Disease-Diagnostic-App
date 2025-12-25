@@ -1,6 +1,7 @@
 streamlit
-tensorflow==2.12.0
 numpy
+pandas
+scikit-learn
+tensorflow
 pillow
 requests
-scikit-learn
