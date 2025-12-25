@@ -2,51 +2,64 @@ import streamlit as st
 import numpy as np
 import pickle
 
-# ================= PAGE CONFIG =================
-st.set_page_config(
-    page_title="Multi Disease Diagnostic App",
-    layout="centered"
-)
+st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
 
 st.title("🩺 Kidney Disease Prediction")
-st.write("Enter patient details to predict Chronic Kidney Disease")
 
 # ================= LOAD MODEL =================
 @st.cache_resource
 def load_model():
     with open("models/kidney_model.pkl", "rb") as f:
-        data = pickle.load(f)
-    return data
+        model, scaler = pickle.load(f)
+    return model, scaler
 
-data = load_model()
+model, scaler = load_model()
 
-model = data["model"]
-scaler = data["scaler"]
-encoders = data["encoders"]
-features = data["features"]
+# ================= INPUTS =================
+st.subheader("Enter Patient Details")
 
-# ================= INPUT FORM =================
-input_data = {}
+age = st.number_input("Age", 0, 100)
+bp = st.number_input("Blood Pressure", 0, 200)
+sg = st.number_input("Specific Gravity", 1.0, 1.05)
+al = st.number_input("Albumin", 0, 5)
+su = st.number_input("Sugar", 0, 5)
+bgr = st.number_input("Blood Glucose Random", 0)
+bu = st.number_input("Blood Urea", 0)
+sc = st.number_input("Serum Creatinine", 0.0)
+sod = st.number_input("Sodium", 0)
+pot = st.number_input("Potassium", 0.0)
+hemo = st.number_input("Hemoglobin", 0.0)
+pcv = st.number_input("Packed Cell Volume", 0)
+wc = st.number_input("White Blood Cell Count", 0)
+rc = st.number_input("Red Blood Cell Count", 0.0)
 
-st.subheader("Patient Information")
+# YES / NO → 1 / 0
+htn = st.selectbox("Hypertension", ["No", "Yes"])
+dm = st.selectbox("Diabetes Mellitus", ["No", "Yes"])
+cad = st.selectbox("Coronary Artery Disease", ["No", "Yes"])
+appet = st.selectbox("Appetite", ["Poor", "Good"])
+pe = st.selectbox("Pedal Edema", ["No", "Yes"])
+ane = st.selectbox("Anemia", ["No", "Yes"])
 
-for feature in features:
-    if feature in encoders:
-        # Categorical feature
-        options = list(encoders[feature].classes_)
-        value = st.selectbox(f"{feature}", options)
-        encoded_value = encoders[feature].transform([value])[0]
-        input_data[feature] = encoded_value
-    else:
-        # Numerical feature
-        value = st.number_input(f"{feature}", step=1.0)
-        input_data[feature] = value
+# Encode manually (matches common training)
+htn = 1 if htn == "Yes" else 0
+dm = 1 if dm == "Yes" else 0
+cad = 1 if cad == "Yes" else 0
+appet = 1 if appet == "Good" else 0
+pe = 1 if pe == "Yes" else 0
+ane = 1 if ane == "Yes" else 0
 
-# ================= PREDICTION =================
+# ================= PREDICT =================
 if st.button("🔍 Predict Kidney Disease"):
     try:
-        input_array = np.array([list(input_data.values())])
-        input_scaled = scaler.transform(input_array)
+        input_data = np.array([[  
+            age, bp, sg, al, su,
+            bgr, bu, sc, sod, pot,
+            hemo, pcv, wc, rc,
+            htn, dm, cad, appet, pe, ane
+        ]])
+
+        input_scaled = scaler.transform(input_data)
         prediction = model.predict(input_scaled)[0]
 
         if prediction == 1:
@@ -55,9 +68,5 @@ if st.button("🔍 Predict Kidney Disease"):
             st.success("✅ No Chronic Kidney Disease Detected")
 
     except Exception as e:
-        st.error("Something went wrong during prediction")
+        st.error("Prediction failed")
         st.code(str(e))
-
-# ================= FOOTER =================
-st.markdown("---")
-st.caption("⚕️ AI-based diagnostic support system (Educational purpose only)")
