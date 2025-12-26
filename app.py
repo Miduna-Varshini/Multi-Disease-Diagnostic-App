@@ -241,20 +241,6 @@ def liver_inputs():
     return [age,gender_val,total_bilirubin,direct_bilirubin,alk_phos,alt,ast,total_proteins,albumin,ag_ratio]
 
 # ===================== BRAIN TUMOR PREDICTION PAGE =====================
-import streamlit as st
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from PIL import Image
-import requests
-from io import BytesIO
-
-# ================= PAGE CONFIG =================
-st.set_page_config(page_title="Brain Tumor Prediction", layout="centered")
-st.title("🧠 Brain Tumor Prediction")
-
-# ================= LOAD MODEL =================
-@st.cache_resource
 def load_brain_model():
     FILE_ID = "1r7Kmf14ZGKQK3GSTk3nxPxfAyGpg2m_b"
     URL = f"https://drive.google.com/uc?id={FILE_ID}&export=download"
