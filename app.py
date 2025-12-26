@@ -298,6 +298,9 @@ def brain_tumor_page():
                 st.error("⚠️ Brain Tumor Detected")
             else:
                 st.success("✅ No Brain Tumor Detected")
+            # ================= DOCTOR & HOSPITAL INFO =================
+            appointment_booking("Brain Tumor")
+            show_hospitals("Brain Tumor")
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
 
