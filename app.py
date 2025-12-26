@@ -8,63 +8,8 @@ import requests
 import io
 
 # ================= LANGUAGE DICTIONARY =================
-languages = {
-    "en": {
-        "title": "Multi-Disease Diagnostic Portal",
-        "login": "Login",
-        "signup": "Signup",
-        "username": "Username",
-        "password": "Password",
-        "heart": "Heart Disease",
-        "diabetes": "Diabetes",
-        "brain": "Brain Tumor",
-        "kidney": "Kidney Disease",
-        "liver": "Liver Disease",
-        "predict": "Predict",
-        "upload_image": "Upload MRI Image...",
-        "back": "⬅️ Back",
-        "logout": "Logout",
-        "download_pdf": "📄 Download PDF Report"
-    },
-    "hi": {
-        "title": "बहु-रोग डायग्नोस्टिक पोर्टल",
-        "login": "लॉगिन",
-        "signup": "साइन अप",
-        "username": "उपयोगकर्ता नाम",
-        "password": "पासवर्ड",
-        "heart": "हृदय रोग",
-        "diabetes": "डायबिटीज़",
-        "brain": "मस्तिष्क ट्यूमर",
-        "kidney": "किडनी रोग",
-        "liver": "यकृत रोग",
-        "predict": "भविष्यवाणी करें",
-        "upload_image": "एमआरआई इमेज अपलोड करें...",
-        "back": "⬅️ वापस",
-        "logout": "लॉग आउट",
-        "download_pdf": "📄 पीडीएफ रिपोर्ट डाउनलोड करें"
-    },
-    "ta": {
-        "title": "பல நோய் கண்டறிதல் போர்டல்",
-        "login": "உள் நுழைவு",
-        "signup": "பதிவு செய்",
-        "username": "பயனர் பெயர்",
-        "password": "கடவுச்சொல்",
-        "heart": "இதய நோய்",
-        "diabetes": "நீரிழிவு நோய்",
-        "brain": "மூளை புற்றுநோய்",
-        "kidney": "சிறுநீரக நோய்",
-        "liver": "கல்லீரல் நோய்",
-        "predict": "முன்னறிவிப்பு செய்",
-        "upload_image": "எம்பிஆர் படம் பதிவேற்று...",
-        "back": "⬅️ பின்கொடு",
-        "logout": "வெளியேறு",
-        "download_pdf": "📄 பி.டி.எப் அறிக்கை பதிவிறக்கு"
-    }
-}
 
-# ================= LANGUAGE SELECT =================
-lang = st.selectbox("Select Language / भाषा / மொழி", ["en", "hi", "ta"])
-text = languages[lang]
+
 
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
@@ -79,11 +24,11 @@ if 'report' not in st.session_state:
     st.session_state['report'] = ""
 
 # ===================== PDF CREATOR =====================
-def create_pdf(text_content):
+def create_pdf(text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    safe_text = text_content.encode("latin1", "ignore").decode("latin1")
+    safe_text = text.encode("latin1", "ignore").decode("latin1")
     pdf.multi_cell(0, 10, safe_text)
     pdf_bytes = pdf.output(dest='S').encode('latin1')
     return pdf_bytes
@@ -112,49 +57,31 @@ def load_brain_model():
 
 # ===================== SIGNUP =====================
 def signup():
-    st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
-    st.markdown(f"<h2>📝 {text['signup']}</h2>", unsafe_allow_html=True)
-
-    username = st.text_input(text["username"])
-    password = st.text_input(text["password"], type="password")
-
-    if st.button(text["signup"]):
-        if username == "" or password == "":
-            st.error(text["signup"] + " fields required")
-        elif username in st.session_state['users']:
-            st.error("User already exists")
+    st.title("📝 Signup")
+    username = st.text_input("Enter username")
+    password = st.text_input("Enter password", type="password")
+    if st.button("Signup"):
+        if username in st.session_state['users']:
+            st.error("Username already exists!")
+        elif username == "" or password == "":
+            st.error("Please enter valid credentials")
         else:
             st.session_state['users'][username] = password
-            st.success(text["signup"] + " successful!")
+            st.success("Signup successful! Please login.")
             st.session_state['page'] = 'Login'
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # ===================== LOGIN =====================
 def login():
-    st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
-    st.markdown(f"<h2>🔐 {text['login']}</h2>", unsafe_allow_html=True)
-
-    username = st.text_input(text["username"])
-    password = st.text_input(text["password"], type="password")
-
-    if st.button(text["login"]):
+    st.title("🔑 Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
         if username in st.session_state['users'] and st.session_state['users'][username] == password:
             st.session_state['logged_in'] = True
             st.session_state['current_user'] = username
             st.session_state['page'] = 'Home'
         else:
-            st.error("Invalid credentials")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ===================== DASHBOARD & DISEASE PAGES =====================
-# In all st.button, st.text_input, st.number_input etc, replace text with text["key"].
-# Example:
-# st.button(text["heart"]) instead of st.button("❤️ Heart")
-# st.button(text["predict"]) instead of st.button("Predict")
-# st.file_uploader(text["upload_image"])
-# st.download_button(label=text["download_pdf"])
+            st.error("Invalid username or password")
 
 # ===================== HOME DASHBOARD =====================
 # ===================== IMPROVED HOME DASHBOARD =====================
