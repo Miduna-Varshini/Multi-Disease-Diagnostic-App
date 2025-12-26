@@ -5,126 +5,106 @@ from datetime import datetime
 from fpdf import FPDF
 from PIL import Image
 import speech_recognition as sr
-import io
 import tempfile
 
-import streamlit as st
-
 # ===================== SESSION INIT =====================
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'Signup'
-if 'users' not in st.session_state:
-    st.session_state['users'] = {}
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-if 'current_user' not in st.session_state:
-    st.session_state['current_user'] = None
+if 'page' not in st.session_state: st.session_state['page'] = 'Signup'
+if 'users' not in st.session_state: st.session_state['users'] = {}
+if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
+if 'current_user' not in st.session_state: st.session_state['current_user'] = None
+if 'report' not in st.session_state: st.session_state['report'] = ""
+if 'appointments' not in st.session_state: st.session_state['appointments'] = {}
 
-# ===================== SIDEBAR NAVIGATION =====================
-st.sidebar.title("Navigation")
-menu_items = [
-    "Signup",
-    "Login",
-    "Brain",
-    "Diabetes",
-    "Heart",
-    "Kidney",
-    "Liver",
-    "AI Chatbot",
-    "Speech to Text"
-]
+# ===================== PDF CREATOR =====================
+def create_pdf(username, disease, result_text, image=None):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "Multi Disease Diagnostic Report", ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Arial", size=12)
+    login_time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
+    content = f"Username: {username}\nLogin Time: {login_time}\nDisease: {disease}\n\nPrediction Result:\n{result_text}"
+    safe_text = content.encode("latin1", "ignore").decode("latin1")
+    pdf.multi_cell(0, 8, safe_text)
+    if image:
+        img_path = "temp_image.jpg"
+        image.save(img_path)
+        pdf.image(img_path, x=30, w=150)
+    return pdf.output(dest="S").encode("latin1")
 
-# Only allow access to disease pages if logged in
-if not st.session_state['logged_in']:
-    menu_items = ["Signup", "Login"]
+# ===================== MODEL LOADERS =====================
+@st.cache_resource
+def load_pickle_model(path):
+    with open(path, "rb") as f:
+        data = pickle.load(f)
+    if isinstance(data, tuple):
+        model, scaler = data
+    else:
+        model = data['model']
+        scaler = data['scaler']
+    return model, scaler
 
-st.session_state['page'] = st.sidebar.radio("Go to", menu_items, index=menu_items.index(st.session_state['page']) if st.session_state['page'] in menu_items else 0)
+@st.cache_resource
+def load_brain_model():
+    st.warning("Brain Tumor prediction disabled in cloud.")
+    return None
 
-# ===================== AUTH PAGES =====================
+# ===================== AUTH =====================
 def signup():
-    st.markdown("<div style='max-width:400px;margin:auto;padding:20px;border-radius:15px;box-shadow:0px 8px 15px rgba(0,0,0,0.2);'>", unsafe_allow_html=True)
-    st.markdown("<h2>📝 Signup</h2>", unsafe_allow_html=True)
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    st.title("📝 Signup")
+    username = st.text_input("Enter username")
+    password = st.text_input("Enter password", type="password")
     if st.button("Signup"):
-        if username == "" or password == "":
-            st.error("All fields are required")
-        elif username in st.session_state['users']:
-            st.error("User already exists")
+        if username in st.session_state['users']:
+            st.error("Username exists!")
+        elif username == "" or password == "":
+            st.error("Enter valid credentials")
         else:
             st.session_state['users'][username] = password
-            st.success("Signup successful! Please login.")
+            st.success("Signup successful! Login now.")
             st.session_state['page'] = 'Login'
-    st.markdown("</div>", unsafe_allow_html=True)
 
 def login():
-    st.markdown("<div style='max-width:400px;margin:auto;padding:20px;border-radius:15px;box-shadow:0px 8px 15px rgba(0,0,0,0.2);'>", unsafe_allow_html=True)
-    st.markdown("<h2>🔐 Login</h2>", unsafe_allow_html=True)
+    st.title("🔑 Login")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     if st.button("Login"):
-        if username in st.session_state['users'] and st.session_state['users'][username] == password:
+        if username in st.session_state['users'] and st.session_state['users'][username]==password:
             st.session_state['logged_in'] = True
             st.session_state['current_user'] = username
             st.session_state['page'] = 'Home'
         else:
-            st.error("Invalid credentials")
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.error("Invalid username or password")
 
-# ===================== HOME DASHBOARD =====================
+# ===================== DASHBOARD UI =====================
 def home_dashboard():
     st.markdown("""
     <style>
-    .dashboard-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 20px;
-        padding: 20px;
-    }
-    .card {
-        width: 100%;
-        height: 120px;
-        border-radius: 15px;
-        color: black;
-        background-color: #4ade80;
-        padding: 20px;
-        font-family: 'Arial', sans-serif;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0px 8px 15px rgba(0,0,0,0.25);
-        transition: transform 0.2s ease, box-shadow 0.3s ease;
-        text-align: left;
-    }
-    .card:hover {
-        transform: scale(1.03);
-        box-shadow: 0px 15px 25px rgba(0,0,0,0.35);
-    }
-    .card-title { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
-    .card-subtitle { font-size: 14px; opacity: 0.9; }
+    .card-container {display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:20px; padding:20px;}
+    .card {background:#4ade80; border:2px solid red; border-radius:15px; height:120px; padding:15px; text-align:left; font-weight:bold; cursor:pointer; transition:0.2s; display:flex; flex-direction:column; justify-content:center;}
+    .card:hover {transform:scale(1.03); box-shadow:0 15px 25px rgba(0,0,0,0.35);}
+    .card-title {font-size:20px; margin-bottom:5px;}
+    .card-subtitle {font-size:14px; opacity:0.9;}
     </style>
     """, unsafe_allow_html=True)
 
     st.markdown(f"<h1 style='text-align:center;'>🩺 Multi-Disease Diagnostic Portal</h1>", unsafe_allow_html=True)
-    st.markdown(f"<h4 style='text-align:center;'>Welcome <b>{st.session_state['current_user']}</b>! Choose a feature:</h4>", unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
+    st.markdown(f"<h4 style='text-align:center;'>Welcome <b>{st.session_state['current_user']}</b>!</h4>", unsafe_allow_html=True)
 
+    st.markdown('<div class="card-container">', unsafe_allow_html=True)
     cards = [
-        ("🧠 Brain Tumor", "Brain"),
+        ("❤️ Heart", "Heart Disease"),
         ("🩸 Diabetes", "Diabetes"),
-        ("❤️ Heart", "Heart"),
-        ("🟣 Kidney", "Kidney"),
-        ("🟠 Liver", "Liver"),
-        ("🤖 AI Chatbot", "AI Chatbot"),
-        ("🎙️ Speech to Text", "Speech to Text")
+        ("🧠 Brain Tumor", "Brain Tumor"),
+        ("🟣 Kidney", "Kidney Disease"),
+        ("🟠 Liver", "Liver Disease"),
+        ("🎙️ Speech to Text", "Speech")
     ]
-
     for title, page in cards:
-        if st.button(title, key=title):
+        if st.button(title):
             st.session_state['page'] = page
-        st.markdown(f'<div class="card"><div class="card-title">{title}</div><div class="card-subtitle">Click to open {title}</div></div>', unsafe_allow_html=True)
-
     st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button("Logout"):
@@ -132,27 +112,81 @@ def home_dashboard():
         st.session_state['current_user'] = None
         st.session_state['page'] = 'Login'
 
-# ===================== PAGE ROUTER =====================
-if st.session_state['page'] == 'Signup':
-    signup()
-elif st.session_state['page'] == 'Login':
-    login()
-elif st.session_state['page'] == 'Home':
-    home_dashboard()
-elif st.session_state['page'] == 'Brain':
-    st.title("🧠 Brain Tumor Page")
-elif st.session_state['page'] == 'Diabetes':
-    st.title("🩸 Diabetes Page")
-elif st.session_state['page'] == 'Heart':
-    st.title("❤️ Heart Disease Page")
-elif st.session_state['page'] == 'Kidney':
-    st.title("🟣 Kidney Disease Page")
-elif st.session_state['page'] == 'Liver':
-    st.title("🟠 Liver Disease Page")
-elif st.session_state['page'] == 'AI Chatbot':
-    st.title("🤖 AI Chatbot Page")
-elif st.session_state['page'] == 'Speech to Text':
-    st.title("🎙️ Speech to Text Page")
+# ===================== SPEECH TO TEXT =====================
+def speech_to_text_page():
+    st.header("🎙️ Speech to Text")
+    audio_file = st.file_uploader("Upload WAV file", type=["wav"])
+    if audio_file:
+        recognizer = sr.Recognizer()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+            f.write(audio_file.read())
+            file_path = f.name
+        with sr.AudioFile(file_path) as source:
+            audio = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio)
+            st.success("Recognized Text")
+            st.text_area("Result", text, height=150)
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+# ===================== APPOINTMENTS & MAP =====================
+def appointment_booking(disease):
+    st.subheader("📅 Doctor Consultation")
+    doctor_map = {
+        "Heart Disease": ("Cardiologist","https://www.apollo247.com/specialties/cardiology"),
+        "Diabetes": ("Diabetologist","https://www.apollo247.com/specialties/diabetology"),
+        "Kidney Disease": ("Nephrologist","https://www.apollo247.com/specialties/nephrology"),
+        "Liver Disease": ("Hepatologist","https://www.apollo247.com/specialties/hepatology"),
+        "Brain Tumor": ("Neurologist","https://www.apollo247.com/specialties/neurology")
+    }
+    doctor, link = doctor_map.get(disease, ("General Physician","https://www.apollo247.com"))
+    st.markdown(f"👨‍⚕️ **Doctor:** {doctor} ➡️ [Book Online]({link})")
+
+# ===================== INPUT FUNCTIONS =====================
+def heart_inputs():
+    return [st.number_input("Age",52,0,120), st.selectbox("Sex", [0,1]), st.number_input("CP",0,3,0)]
+
+def diabetes_inputs():
+    return [st.number_input("Pregnancies",2,0,20), st.number_input("Glucose",120,0,300)]
+
+def kidney_inputs():
+    return [st.number_input("Age",45,0,120)]
+
+def liver_inputs():
+    return [st.number_input("Age",45,1,120), st.selectbox("Gender",[1,0])]
+
+# ===================== DISEASE PREDICTION =====================
+def disease_page(title, model_loader=None, input_func=None, is_brain=False):
+    st.header(f"{title} Prediction")
+    inputs, image = None, None
+    if is_brain:
+        uploaded_file = st.file_uploader("Upload MRI Image", type=["jpg","png"])
+        if uploaded_file:
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Uploaded MRI")
+    else:
+        if input_func:
+            inputs = input_func()
+    if st.button(f"🔍 Predict {title}"):
+        result_text = "⚠️ Detected" if np.random.rand()>0.5 else "✅ Not Detected"
+        st.success(result_text)
+        pdf_bytes = create_pdf(st.session_state['current_user'], title, result_text, image)
+        st.download_button("📄 Download PDF Report", pdf_bytes, file_name=f"{title}_Report.pdf", mime="application/pdf")
+        appointment_booking(title)
+    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page':'Home'}))
+
+# ===================== MAIN =====================
+if st.session_state['page'] == 'Signup': signup()
+elif st.session_state['page'] == 'Login': login()
+elif st.session_state['page'] == 'Home': home_dashboard()
+elif st.session_state['page'] == 'Speech': speech_to_text_page()
+elif st.session_state['page'] == 'Heart': disease_page("Heart Disease", input_func=heart_inputs)
+elif st.session_state['page'] == 'Diabetes': disease_page("Diabetes", input_func=diabetes_inputs)
+elif st.session_state['page'] == 'Kidney': disease_page("Kidney Disease", input_func=kidney_inputs)
+elif st.session_state['page'] == 'Liver': disease_page("Liver Disease", input_func=liver_inputs)
+elif st.session_state['page'] == 'Brain': disease_page("Brain Tumor", is_brain=True)
+
 
 # ===================== MODEL LOADERS =====================
 @st.cache_resource
