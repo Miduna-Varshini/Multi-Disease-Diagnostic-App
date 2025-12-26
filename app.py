@@ -353,7 +353,6 @@ def disease_page(title, model_loader, input_func=None, is_brain=False):
 
             else:
                 st.success(result_text)
-            )
 
             # PDF report
             pdf_bytes = create_pdf(
