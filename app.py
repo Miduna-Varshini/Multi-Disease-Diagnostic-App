@@ -256,6 +256,7 @@ def brain_tumor_page():
     st.header("🧠 Brain Tumor Detection")
 
     model = load_brain_model()
+    st.write("Model expects:", model.input_shape)
 
     uploaded_file = st.file_uploader(
         "Upload Brain MRI Image",
@@ -266,9 +267,29 @@ def brain_tumor_page():
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="Uploaded MRI", use_column_width=True)
 
-        img = image.resize((128, 128))
-        img_array = np.array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
+        input_shape = model.input_shape[1:]  # remove batch size
+
+        # CASE 1: Dense / Flattened model
+        if len(input_shape) == 1:
+            side = int(np.sqrt(input_shape[0] / 3))
+            img = image.resize((side, side))
+            img_array = np.array(img) / 255.0
+            img_array = img_array.flatten()
+            img_array = np.expand_dims(img_array, axis=0)
+
+        # CASE 2: CNN grayscale
+        elif input_shape[-1] == 1:
+            img = image.resize((input_shape[0], input_shape[1]))
+            img = img.convert("L")
+            img_array = np.array(img) / 255.0
+            img_array = np.expand_dims(img_array, axis=-1)
+            img_array = np.expand_dims(img_array, axis=0)
+
+        # CASE 3: CNN RGB
+        else:
+            img = image.resize((input_shape[0], input_shape[1]))
+            img_array = np.array(img) / 255.0
+            img_array = np.expand_dims(img_array, axis=0)
 
         if st.button("🔍 Predict Brain Tumor"):
             prediction = model.predict(img_array)
@@ -279,6 +300,7 @@ def brain_tumor_page():
                 st.success("✅ No Brain Tumor Detected")
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
+
 
 # ===================== APPOINTMENTS =====================
 def appointment_booking(disease):
