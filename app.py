@@ -1,10 +1,10 @@
 import streamlit as st
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 from io import BytesIO
 from fpdf import FPDF
 from PIL import Image
+import matplotlib.pyplot as plt
 import requests
 from tensorflow.keras.models import load_model
 
@@ -17,10 +17,10 @@ st.set_page_config(
 )
 
 # ==================================================
-# SESSION STATE INIT
+# SESSION STATE
 # ==================================================
 if "page" not in st.session_state:
-    st.session_state.page = "Login"
+    st.session_state.page = "Signup"
 if "users" not in st.session_state:
     st.session_state.users = {}
 if "logged_in" not in st.session_state:
@@ -29,37 +29,44 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 
 # ==================================================
-# GLOBAL CSS
+# GLOBAL CSS (NO BLOCK ISSUE)
 # ==================================================
 st.markdown("""
 <style>
-.stApp { background-color: white; }
+header {visibility: hidden;}
+.block-container {padding-top: 1rem;}
+.stApp {background-color: white;}
 
-.auth-card, .card {
-    background: #4ade80;
+.auth-card {
+    background-color: #4ade80;
     border: 2px solid red;
-    border-radius: 15px;
-    padding: 25px;
+    border-radius: 18px;
+    padding: 35px;
+    max-width: 450px;
+    margin: auto;
+    margin-top: 80px;
     box-shadow: 0px 10px 25px rgba(0,0,0,0.3);
 }
 
 button {
-    border-radius: 10px !important;
+    background-color: red !important;
+    color: white !important;
     font-weight: bold !important;
+    border-radius: 10px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================================================
-# PDF CREATOR (SAFE)
+# PDF CREATOR (FIXED)
 # ==================================================
 def create_pdf(text, chart_buf=None):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
 
-    safe_text = text.encode("latin1", "ignore").decode("latin1")
-    pdf.multi_cell(0, 8, safe_text)
+    safe = text.encode("latin1", "ignore").decode("latin1")
+    pdf.multi_cell(0, 8, safe)
 
     if chart_buf:
         pdf.add_page()
@@ -68,7 +75,7 @@ def create_pdf(text, chart_buf=None):
     return pdf.output(dest="S").encode("latin1")
 
 # ==================================================
-# RISK ANALYSIS + CHART
+# RISK + CHART
 # ==================================================
 def show_risk(title, probability):
     risk = round(probability * 100, 2)
@@ -87,13 +94,12 @@ def show_risk(title, probability):
     buf = BytesIO()
     fig.savefig(buf, format="png")
     buf.seek(0)
-
     return risk, buf
 
 # ==================================================
-# RECOMMENDATIONS
+# RECOMMENDATION
 # ==================================================
-def recommendations(disease, risk):
+def recommendations(risk):
     if risk < 30:
         return "Low Risk\n• Maintain healthy diet\n• Regular exercise\n• Yearly checkup"
     elif risk < 70:
@@ -120,28 +126,34 @@ def load_brain_model():
     return load_model("brain.h5")
 
 # ==================================================
-# AUTH PAGES
+# SIGNUP
 # ==================================================
 def signup():
     st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
-    st.header("📝 Signup")
+    st.markdown("<h2 style='text-align:center'>📝 Signup</h2>", unsafe_allow_html=True)
+
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
 
     if st.button("Signup"):
-        if u == "" or p == "":
+        if not u or not p:
             st.error("All fields required")
         elif u in st.session_state.users:
-            st.error("User exists")
+            st.error("User already exists")
         else:
             st.session_state.users[u] = p
-            st.success("Signup success")
+            st.success("Signup successful")
             st.session_state.page = "Login"
+
     st.markdown("</div>", unsafe_allow_html=True)
 
+# ==================================================
+# LOGIN
+# ==================================================
 def login():
     st.markdown("<div class='auth-card'>", unsafe_allow_html=True)
-    st.header("🔐 Login")
+    st.markdown("<h2 style='text-align:center'>🔐 Login</h2>", unsafe_allow_html=True)
+
     u = st.text_input("Username")
     p = st.text_input("Password", type="password")
 
@@ -152,17 +164,17 @@ def login():
             st.session_state.page = "Home"
         else:
             st.error("Invalid credentials")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ==================================================
-# HOME DASHBOARD
+# HOME
 # ==================================================
 def home():
     st.header("🩺 Multi Disease Diagnostic Portal")
     st.write(f"Welcome **{st.session_state.current_user}**")
 
     col1, col2, col3 = st.columns(3)
-
     if col1.button("❤️ Heart"):
         st.session_state.page = "Heart"
     if col2.button("🩸 Diabetes"):
@@ -181,13 +193,13 @@ def home():
         st.session_state.logged_in = False
 
 # ==================================================
-# DISEASE PAGE TEMPLATE
+# DISEASE PAGE
 # ==================================================
-def disease_page(title, model_loader, inputs=None, is_image=False):
+def disease_page(title, loader, inputs=None, image=False):
     st.header(title)
 
-    if is_image:
-        file = st.file_uploader("Upload MRI", type=["jpg","png"])
+    if image:
+        file = st.file_uploader("Upload MRI", ["jpg","png"])
         if not file:
             return
         img = Image.open(file).resize((224,224))
@@ -196,17 +208,17 @@ def disease_page(title, model_loader, inputs=None, is_image=False):
         data = inputs()
 
     if st.button("Predict"):
-        if is_image:
-            model = model_loader()
+        if image:
+            model = loader()
             X = np.expand_dims(np.array(img)/255, 0)
             prob = model.predict(X)[0][0]
         else:
-            model, scaler = model_loader()
+            model, scaler = loader()
             X = scaler.transform([data])
             prob = model.predict_proba(X)[0][1]
 
         risk, chart = show_risk(title, prob)
-        advice = recommendations(title, risk)
+        advice = recommendations(risk)
 
         st.subheader("📝 Recommendation")
         st.info(advice)
@@ -229,24 +241,32 @@ Advice:
 # INPUT FORMS
 # ==================================================
 def heart_inputs():
-    return [st.number_input("Age",0,120,50),
-            st.selectbox("Sex",[0,1]),
-            st.number_input("Cholesterol",100,600,240)]
+    return [
+        st.number_input("Age",0,120,50),
+        st.selectbox("Sex",[0,1]),
+        st.number_input("Cholesterol",100,600,240)
+    ]
 
 def diabetes_inputs():
-    return [st.number_input("Glucose",0,300,120),
-            st.number_input("BMI",0.0,70.0,25.0),
-            st.number_input("Age",1,120,30)]
+    return [
+        st.number_input("Glucose",0,300,120),
+        st.number_input("BMI",0.0,70.0,25.0),
+        st.number_input("Age",1,120,30)
+    ]
 
 def kidney_inputs():
-    return [st.number_input("BP",0,200,80),
-            st.number_input("Creatinine",0.0,20.0,1.0),
-            st.number_input("Age",1,120,45)]
+    return [
+        st.number_input("BP",0,200,80),
+        st.number_input("Creatinine",0.0,20.0,1.0),
+        st.number_input("Age",1,120,45)
+    ]
 
 def liver_inputs():
-    return [st.number_input("Bilirubin",0.0,10.0,1.2),
-            st.number_input("ALT",0,2000,35),
-            st.number_input("Age",1,120,40)]
+    return [
+        st.number_input("Bilirubin",0.0,10.0,1.2),
+        st.number_input("ALT",0,2000,35),
+        st.number_input("Age",1,120,40)
+    ]
 
 # ==================================================
 # ROUTER
@@ -266,4 +286,4 @@ elif st.session_state.page == "Kidney":
 elif st.session_state.page == "Liver":
     disease_page("Liver Disease", lambda: load_pickle_model("models/liver_model.pkl"), liver_inputs)
 elif st.session_state.page == "Brain":
-    disease_page("Brain Tumor", load_brain_model, is_image=True)
+    disease_page("Brain Tumor", load_brain_model, image=True)
