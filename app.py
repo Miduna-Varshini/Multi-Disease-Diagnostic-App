@@ -7,6 +7,9 @@ from tensorflow.keras.models import load_model
 from PIL import Image
 import requests
 import io
+import speech_recognition as sr
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
+import av
 
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
@@ -131,14 +134,28 @@ def home_dashboard():
     st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
 
     # Cards
-    for title, key, subtitle in [("❤️ Heart", "heart_card", "Predict Heart Disease"),
-                                 ("🩸 Diabetes", "diabetes_card", "Predict Diabetes"),
-                                 ("🧠 Brain Tumor", "brain_card", "Predict Brain Tumor"),
-                                 ("🟣 Kidney", "kidney_card", "Predict Kidney Disease"),
-                                 ("🟠 Liver", "liver_card", "Predict Liver Disease")]:
+    # Cards
+    for title, key, subtitle, page in [
+        ("❤️ Heart", "heart_card", "Predict Heart Disease", "Heart"),
+        ("🩸 Diabetes", "diabetes_card", "Predict Diabetes", "Diabetes"),
+        ("🧠 Brain Tumor", "brain_card", "Predict Brain Tumor", "Brain"),
+        ("🟣 Kidney", "kidney_card", "Predict Kidney Disease", "Kidney"),
+        ("🟠 Liver", "liver_card", "Predict Liver Disease", "Liver"),
+        ("🎙️ Speech to Text", "speech_card", "Voice Based Input", "Speech")
+    ]:
         if st.button(title, key=key):
-            st.session_state['page'] = title.split()[1] if " " in title else title
-        st.markdown(f'<div class="card"><div class="card-title">{title}</div><div class="card-subtitle">{subtitle}</div></div>', unsafe_allow_html=True)
+            st.session_state['page'] = page
+
+        st.markdown(
+            f"""
+            <div class="card">
+                <div class="card-title">{title}</div>
+                <div class="card-subtitle">{subtitle}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -147,6 +164,9 @@ def home_dashboard():
         st.session_state['current_user'] = None
         st.session_state['page'] = 'Login'
 
+
+
+# ===================== INPUT FUNCTIONS =====================
 # ===================== APPOINTMENT BOOKING & HOSPITALS =====================
 def appointment_booking(disease):
     st.subheader("📅 Doctor Consultation")
@@ -193,8 +213,54 @@ def show_hospitals(disease):
     query = search_map.get(disease, "hospital near me")
     maps_link = f"https://www.google.com/maps/search/{query.replace(' ', '+')}"
     st.markdown(f"🔍 **Search Hospitals:** [Click Here]({maps_link})")
+# ===================== LIVE SPEECH TO TEXT =====================
+def speech_to_text_page():
+    st.header("🎙️ Live Speech to Text")
+    st.write("Speak through your microphone and convert speech to text")
 
-# ===================== INPUT FUNCTIONS =====================
+    recognizer = sr.Recognizer()
+
+    class AudioProcessor(AudioProcessorBase):
+        def __init__(self):
+            self.audio_data = b""
+
+        def recv(self, frame: av.AudioFrame):
+            audio = frame.to_ndarray().tobytes()
+            self.audio_data += audio
+            return frame
+
+    ctx = webrtc_streamer(
+        key="speech-to-text",
+        audio_processor_factory=AudioProcessor,
+        media_stream_constraints={"audio": True, "video": False},
+    )
+
+    if ctx.audio_processor:
+        if st.button("📝 Convert Speech to Text"):
+            try:
+                audio_data = ctx.audio_processor.audio_data
+
+                audio = sr.AudioData(
+                    audio_data,
+                    sample_rate=48000,
+                    sample_width=2
+                )
+
+                text = recognizer.recognize_google(audio)
+                st.success("Recognized Text:")
+                st.write(text)
+
+                # OPTIONAL: Auto disease suggestion
+                if "chest pain" in text.lower():
+                    st.info("💡 Possible Heart-related symptom detected")
+                if "sugar" in text.lower():
+                    st.info("💡 Possible Diabetes-related symptom detected")
+
+            except sr.UnknownValueError:
+                st.error("Could not understand audio")
+            except sr.RequestError as e:
+                st.error(f"API Error: {e}")
+
 def heart_inputs():
     age = st.number_input("Age", 0, 120, 52)
     sex = st.selectbox("Sex (0=Female, 1=Male)", [0,1])
@@ -331,3 +397,5 @@ elif st.session_state['page'] == 'Liver':
     disease_page("Liver Disease", lambda: load_pickle_model("models/liver_model.pkl"), liver_inputs)
 elif st.session_state['page'] == 'Brain':
     disease_page("Brain Tumor", load_brain_model, is_brain=True)
+elif st.session_state['page'] == 'Speech':
+    speech_to_text_page()
