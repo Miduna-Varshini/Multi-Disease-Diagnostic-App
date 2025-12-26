@@ -6,9 +6,8 @@ from fpdf import FPDF
 from PIL import Image
 import speech_recognition as sr
 import tempfile
+import requests   # ✅ THIS LINE FIXES THE ERROR
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
-
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
     st.session_state['page'] = 'Signup'
@@ -241,20 +240,20 @@ def liver_inputs():
     return [age,gender_val,total_bilirubin,direct_bilirubin,alk_phos,alt,ast,total_proteins,albumin,ag_ratio]
 
 # ===================== BRAIN TUMOR PREDICTION PAGE =====================
+@st.cache_resource
+def load_brain_model():
+    FILE_ID = "1r7Kmf14ZGKQK3GSTk3nxPxfAyGpg2m_b"
+    URL = f"https://drive.google.com/uc?id={FILE_ID}"
+
+    response = requests.get(URL)
+    with open("brain_tumor_model.h5", "wb") as f:
+        f.write(response.content)
+
+    model = load_model("brain_tumor_model.h5")
+    return model
+
 def brain_tumor_page():
     st.header("🧠 Brain Tumor Detection")
-
-    @st.cache_resource
-    def load_brain_model():
-        FILE_ID = "1r7Kmf14ZGKQK3GSTk3nxPxfAyGpg2m_b"
-        URL = f"https://drive.google.com/uc?id={FILE_ID}"
-        response = requests.get(URL)
-
-        with open("brain_tumor_model.h5", "wb") as f:
-            f.write(response.content)
-
-        model = load_model("brain_tumor_model.h5")
-        return model
 
     model = load_brain_model()
 
@@ -267,7 +266,6 @@ def brain_tumor_page():
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="Uploaded MRI", use_column_width=True)
 
-        # 👇 CNN MODEL PREPROCESS (MOST MODELS USE THIS)
         img = image.resize((128, 128))
         img_array = np.array(img) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
