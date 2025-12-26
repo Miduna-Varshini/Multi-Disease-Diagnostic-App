@@ -8,89 +8,7 @@ import speech_recognition as sr
 import io
 import tempfile
 
-# ===================== SESSION INIT =====================
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'Signup'
-
-# ===================== PAGES =====================
-def signup():
-    st.title("📝 Signup")
-    username = st.text_input("Enter username")
-    password = st.text_input("Enter password", type="password")
-    if st.button("Signup"):
-        st.success("Signup successful! Please login.")
-
-def login():
-    st.title("🔑 Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        st.success("Login successful!")
-
-def brain_page():
-    st.title("🧠 Brain Tumor")
-    st.info("Brain page content goes here")
-
-def diabetes_page():
-    st.title("🩸 Diabetes")
-    st.info("Diabetes page content goes here")
-
-def heart_page():
-    st.title("❤️ Heart Disease")
-    st.info("Heart page content goes here")
-
-def kidney_page():
-    st.title("🟣 Kidney Disease")
-    st.info("Kidney page content goes here")
-
-def liver_page():
-    st.title("🟠 Liver Disease")
-    st.info("Liver page content goes here")
-
-def ai_chatbot_page():
-    st.title("🤖 AI Chatbot")
-    st.info("AI Chatbot content goes here")
-
-def speech_to_text_page():
-    st.title("🎙️ Speech to Text")
-    st.info("Speech-to-Text content goes here")
-
-# ===================== SIDEBAR NAVIGATION =====================
-st.sidebar.title("Navigation")
-page = st.sidebar.radio(
-    "Go to",
-    [
-        "Signup",
-        "Login",
-        "Brain",
-        "Diabetes",
-        "Heart",
-        "Kidney",
-        "Liver",
-        "AI Chatbot",
-        "Speech to Text"
-    ]
-)
-
-# ===================== DISPLAY PAGE =====================
-if page == "Signup":
-    signup()
-elif page == "Login":
-    login()
-elif page == "Brain":
-    brain_page()
-elif page == "Diabetes":
-    diabetes_page()
-elif page == "Heart":
-    heart_page()
-elif page == "Kidney":
-    kidney_page()
-elif page == "Liver":
-    liver_page()
-elif page == "AI Chatbot":
-    ai_chatbot_page()
-elif page == "Speech to Text":
-    speech_to_text_page()
+import streamlit as st
 
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
@@ -101,44 +19,140 @@ if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
-if 'report' not in st.session_state:
-    st.session_state['report'] = ""
-if 'appointments' not in st.session_state:
-    st.session_state['appointments'] = {}  # Stores user appointments
 
-# ===================== PDF CREATOR =====================
-def create_pdf(username, disease, result_text, image=None):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+# ===================== SIDEBAR NAVIGATION =====================
+st.sidebar.title("Navigation")
+menu_items = [
+    "Signup",
+    "Login",
+    "Brain",
+    "Diabetes",
+    "Heart",
+    "Kidney",
+    "Liver",
+    "AI Chatbot",
+    "Speech to Text"
+]
 
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "Multi Disease Diagnostic Report", ln=True, align="C")
-    pdf.ln(5)
+# Only allow access to disease pages if logged in
+if not st.session_state['logged_in']:
+    menu_items = ["Signup", "Login"]
 
-    pdf.set_font("Arial", size=12)
-    login_time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
-    content = f"""
-Username        : {username}
-Login Time     : {login_time}
-Disease        : {disease}
+st.session_state['page'] = st.sidebar.radio("Go to", menu_items, index=menu_items.index(st.session_state['page']) if st.session_state['page'] in menu_items else 0)
 
-Prediction Result:
-{result_text}
-"""
-    safe_text = content.encode("latin1", "ignore").decode("latin1")
-    pdf.multi_cell(0, 8, safe_text)
-    pdf.ln(5)
+# ===================== AUTH PAGES =====================
+def signup():
+    st.markdown("<div style='max-width:400px;margin:auto;padding:20px;border-radius:15px;box-shadow:0px 8px 15px rgba(0,0,0,0.2);'>", unsafe_allow_html=True)
+    st.markdown("<h2>📝 Signup</h2>", unsafe_allow_html=True)
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    if st.button("Signup"):
+        if username == "" or password == "":
+            st.error("All fields are required")
+        elif username in st.session_state['users']:
+            st.error("User already exists")
+        else:
+            st.session_state['users'][username] = password
+            st.success("Signup successful! Please login.")
+            st.session_state['page'] = 'Login'
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    if image is not None:
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "Uploaded MRI Image:", ln=True)
-        img_path = "temp_brain_image.jpg"
-        image.save(img_path)
-        pdf.image(img_path, x=30, w=150)
-        pdf.ln(10)
+def login():
+    st.markdown("<div style='max-width:400px;margin:auto;padding:20px;border-radius:15px;box-shadow:0px 8px 15px rgba(0,0,0,0.2);'>", unsafe_allow_html=True)
+    st.markdown("<h2>🔐 Login</h2>", unsafe_allow_html=True)
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if username in st.session_state['users'] and st.session_state['users'][username] == password:
+            st.session_state['logged_in'] = True
+            st.session_state['current_user'] = username
+            st.session_state['page'] = 'Home'
+        else:
+            st.error("Invalid credentials")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    return pdf.output(dest="S").encode("latin1")
+# ===================== HOME DASHBOARD =====================
+def home_dashboard():
+    st.markdown("""
+    <style>
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .card {
+        width: 100%;
+        height: 120px;
+        border-radius: 15px;
+        color: black;
+        background-color: #4ade80;
+        padding: 20px;
+        font-family: 'Arial', sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0px 8px 15px rgba(0,0,0,0.25);
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        text-align: left;
+    }
+    .card:hover {
+        transform: scale(1.03);
+        box-shadow: 0px 15px 25px rgba(0,0,0,0.35);
+    }
+    .card-title { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+    .card-subtitle { font-size: 14px; opacity: 0.9; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"<h1 style='text-align:center;'>🩺 Multi-Disease Diagnostic Portal</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='text-align:center;'>Welcome <b>{st.session_state['current_user']}</b>! Choose a feature:</h4>", unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
+
+    cards = [
+        ("🧠 Brain Tumor", "Brain"),
+        ("🩸 Diabetes", "Diabetes"),
+        ("❤️ Heart", "Heart"),
+        ("🟣 Kidney", "Kidney"),
+        ("🟠 Liver", "Liver"),
+        ("🤖 AI Chatbot", "AI Chatbot"),
+        ("🎙️ Speech to Text", "Speech to Text")
+    ]
+
+    for title, page in cards:
+        if st.button(title, key=title):
+            st.session_state['page'] = page
+        st.markdown(f'<div class="card"><div class="card-title">{title}</div><div class="card-subtitle">Click to open {title}</div></div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if st.button("Logout"):
+        st.session_state['logged_in'] = False
+        st.session_state['current_user'] = None
+        st.session_state['page'] = 'Login'
+
+# ===================== PAGE ROUTER =====================
+if st.session_state['page'] == 'Signup':
+    signup()
+elif st.session_state['page'] == 'Login':
+    login()
+elif st.session_state['page'] == 'Home':
+    home_dashboard()
+elif st.session_state['page'] == 'Brain':
+    st.title("🧠 Brain Tumor Page")
+elif st.session_state['page'] == 'Diabetes':
+    st.title("🩸 Diabetes Page")
+elif st.session_state['page'] == 'Heart':
+    st.title("❤️ Heart Disease Page")
+elif st.session_state['page'] == 'Kidney':
+    st.title("🟣 Kidney Disease Page")
+elif st.session_state['page'] == 'Liver':
+    st.title("🟠 Liver Disease Page")
+elif st.session_state['page'] == 'AI Chatbot':
+    st.title("🤖 AI Chatbot Page")
+elif st.session_state['page'] == 'Speech to Text':
+    st.title("🎙️ Speech to Text Page")
 
 # ===================== MODEL LOADERS =====================
 @st.cache_resource
