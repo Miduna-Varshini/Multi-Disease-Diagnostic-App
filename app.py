@@ -348,32 +348,30 @@ def disease_page(title, model_loader, input_func=None, is_brain=False):
             st.code(str(e))
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page':'Home'}))
-def appointment_booking(disease):
-    st.subheader("📅 Book Doctor Appointment")
+#----------------------------------------------------------------------------
 
-    doctor_type = {
-        "Heart Disease": "Cardiologist",
-        "Diabetes": "Diabetologist",
-        "Kidney Disease": "Nephrologist",
-        "Liver Disease": "Hepatologist",
-        "Brain Tumor": "Neurologist"
+def appointment_booking(disease):
+    st.subheader("📅 Doctor Consultation")
+
+    doctor_map = {
+        "Heart Disease": ("Cardiologist", "https://www.apollo247.com/specialties/cardiology"),
+        "Diabetes": ("Diabetologist", "https://www.apollo247.com/specialties/diabetology"),
+        "Kidney Disease": ("Nephrologist", "https://www.apollo247.com/specialties/nephrology"),
+        "Liver Disease": ("Hepatologist", "https://www.apollo247.com/specialties/hepatology"),
+        "Brain Tumor": ("Neurologist", "https://www.apollo247.com/specialties/neurology")
     }
 
-    doctor = doctor_type.get(disease, "General Physician")
-
-    date = st.date_input("Select Appointment Date")
-    time = st.time_input("Select Time")
+    doctor, link = doctor_map.get(disease, ("General Physician", "https://www.apollo247.com"))
 
     st.markdown(f"👨‍⚕️ **Recommended Doctor:** {doctor}")
+    st.warning("⚠️ Please consult a certified doctor for confirmation")
 
-    # Teleconsultation link
-    meet_link = "https://meet.google.com/new"
-
-    if st.button("✅ Confirm Appointment"):
-        st.success("Appointment Booked Successfully 🎉")
-        st.info(f"📅 Date: {date}")
-        st.info(f"⏰ Time: {time}")
-        st.markdown(f"🔗 **Join Consultation:** [Click Here]({meet_link})")
+    st.markdown(
+        f"""
+        🔗 **Online Consultation:**  
+        👉 [Click here to book appointment]({link})
+        """
+    )
 
 # ===================== INPUT FUNCTIONS =====================
 def heart_inputs():
