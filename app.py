@@ -296,6 +296,7 @@ def brain_tumor_page():
 
             if prediction[0][0] > 0.5:
                 st.error("⚠️ Brain Tumor Detected")
+                st.error(result_text)
             else:
                 st.success("✅ No Brain Tumor Detected")
                 st.success(result_text)
