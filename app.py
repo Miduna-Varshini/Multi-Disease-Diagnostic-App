@@ -8,16 +8,6 @@ import speech_recognition as sr
 import tempfile
 import requests   # ✅ THIS LINE FIXES THE ERROR
 from tensorflow.keras.models import load_model
-import google.generativeai as genai
-# ===================== GEMINI CONFIG =====================
-api_key = st.secrets.get("GEMINI_API_KEY")
-
-if api_key:
-    genai.configure(api_key=api_key)
-    gemini_model = genai.GenerativeModel("models/gemini-2.0-flash")
-else:
-    gemini_model = None
-
 # ===================== SESSION INIT =====================
 if 'page' not in st.session_state:
     st.session_state['page'] = 'Signup'
@@ -137,7 +127,7 @@ def home_dashboard():
         ("🟣 Kidney","kidney_card","Predict Kidney Disease","Kidney"),
         ("🟠 Liver","liver_card","Predict Liver Disease","Liver"),
         ("🎙️ Speech to Text","speech_card","Voice Input","Speech")
-        ("🤖 AI Chat","chat_card","Ask Health Questions","Chat")
+    
     ]
     for title,key,subtitle,page in cards:
         if st.button(title,key=key):
@@ -383,51 +373,7 @@ def speech_to_text_page():
             st.error("Could not understand audio")
         except sr.RequestError as e:
             st.error(f"API Error: {e}")
-            def ai_chat_page():
-    st.header("🤖 AI Health Assistant")
-    st.write("Ask about symptoms, diseases, reports, or prevention.")
-
-    if not gemini_model:
-        st.error("Gemini API key not configured.")
-        return
-
-    # Init session
-    if "chat" not in st.session_state:
-        st.session_state.chat = gemini_model.start_chat(history=[])
-
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Show chat history
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    # Input
-    user_input = st.chat_input("Ask your health question...")
-
-    if user_input:
-        # user msg
-        st.session_state.messages.append(
-            {"role": "user", "content": user_input}
-        )
-        with st.chat_message("user"):
-            st.markdown(user_input)
-
-        # gemini reply
-        try:
-            response = st.session_state.chat.send_message(user_input)
-            reply = response.text
-        except Exception as e:
-            reply = f"⚠️ Error: {e}"
-
-        st.session_state.messages.append(
-            {"role": "assistant", "content": reply}
-        )
-        with st.chat_message("assistant"):
-            st.markdown(reply)
-
-    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
+            
 
 
 # ===================== MAIN =====================
@@ -449,5 +395,3 @@ elif st.session_state['page'] == "Brain":
     brain_tumor_page()
 elif st.session_state['page']=="Speech":
     speech_to_text_page()
-elif st.session_state['page'] == "Chat":
-    ai_chat_page()
