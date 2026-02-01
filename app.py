@@ -154,21 +154,28 @@ def disease_page(disease_name, model_loader, input_func):
             X = np.array(inputs).reshape(1, -1)
             X_scaled = scaler.transform(X)
 
-            prediction = model.predict(X_scaled)[0]
+            raw_prediction = model.predict(X_scaled)
 
-            # ================= RESULT DISPLAY =================
+            # ===== FIX =====
+            if isinstance(raw_prediction, np.ndarray):
+                if raw_prediction.ndim > 1:
+                    value = raw_prediction[0][0]
+                else:
+                    value = raw_prediction[0]
+            else:
+                value = raw_prediction
+
+            prediction = 1 if value >= 0.5 else 0
+            # =================
+
             if prediction == 1:
                 result_text = f"⚠️ {disease_name} Detected"
                 st.error(result_text)
-
-                # Doctor recommendation
                 appointment_booking(disease_name)
-
             else:
                 result_text = f"✅ {disease_name} Not Detected"
                 st.success(result_text)
 
-            # ================= PDF DOWNLOAD =================
             pdf_bytes = create_pdf(
                 username=st.session_state['current_user'],
                 disease=disease_name,
@@ -182,7 +189,6 @@ def disease_page(disease_name, model_loader, input_func):
                 "application/pdf"
             )
 
-            # ================= HOSPITAL SEARCH =================
             show_hospitals(disease_name)
 
         except Exception as e:
@@ -190,6 +196,7 @@ def disease_page(disease_name, model_loader, input_func):
             st.code(str(e))
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
+
 
 def heart_inputs():
     age = st.number_input("Age",0,120,52)
