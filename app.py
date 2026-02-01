@@ -147,12 +147,6 @@ def disease_page(disease_name, model_loader, input_func):
 
     inputs = input_func()
 
-    # Initialize state
-    if "result_text" not in st.session_state:
-        st.session_state.result_text = None
-    if "prediction_done" not in st.session_state:
-        st.session_state.prediction_done = False
-
     if st.button("🔍 Predict"):
         try:
             model, scaler = model_loader()
@@ -160,72 +154,77 @@ def disease_page(disease_name, model_loader, input_func):
             X = np.array(inputs).reshape(1, -1)
             X_scaled = scaler.transform(X)
 
-            raw_prediction = model.predict(X_scaled)
-
-            # Handle all model outputs safely
-            if isinstance(raw_prediction, np.ndarray):
-                value = raw_prediction[0][0] if raw_prediction.ndim > 1 else raw_prediction[0]
-            else:
-                value = raw_prediction
-
-            prediction = 1 if value >= 0.5 else 0
+            prediction = model.predict(X_scaled)[0]
 
             if prediction == 1:
-                st.session_state.result_text = f"⚠️ {disease_name} Detected"
+                result_text = f"⚠️ {disease_name} Detected"
+                
             else:
-                st.session_state.result_text = f"✅ {disease_name} Not Detected"
+                result_text = f"✅ No {disease_name} Detected"
+                
 
-            st.session_state.prediction_done = True
+            # PDF
+            pdf_bytes = create_pdf(
+                username=st.session_state['current_user'],
+                disease=disease_name,
+                result_text=result_text
+            )
+            st.download_button(
+                "📄 Download PDF Report",
+                pdf_bytes,
+                f"{disease_name}_Report.pdf",
+                "application/pdf"
+            )
+
+            # Appointment + Hospitals
+            appointment_booking(disease_name)
+            show_hospitals(disease_name)
 
         except Exception as e:
-            st.error("❌ Prediction failed")
+            st.error("Prediction failed ❌")
             st.code(str(e))
 
-    # ================= SHOW RESULT (OUTSIDE BUTTON) =================
-    if st.session_state.prediction_done:
-        if "Detected" in st.session_state.result_text:
-            st.error(st.session_state.result_text)
-            appointment_booking(disease_name)
+    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
+
+
+
+def heart_page():
+    st.header("❤️ Heart Disease Prediction")
+
+    age = st.number_input("Age", 0, 120, 52)
+    sex = st.selectbox("Sex (0=Female, 1=Male)", [0,1])
+    cp = st.number_input("Chest Pain Type", 0, 3, 0)
+    trestbps = st.number_input("Blood Pressure", 80, 200, 120)
+    chol = st.number_input("Cholesterol", 100, 600, 240)
+    fbs = st.selectbox("FBS > 120", [0,1])
+    restecg = st.number_input("Rest ECG", 0, 2, 1)
+    thalach = st.number_input("Max Heart Rate", 60, 250, 150)
+    exang = st.selectbox("Exercise Angina", [0,1])
+    oldpeak = st.number_input("ST Depression", 0.0, 10.0, 1.2)
+    slope = st.number_input("Slope", 0, 2, 1)
+    ca = st.number_input("Vessels Colored", 0, 3, 0)
+    thal = st.number_input("Thalassemia", 1, 3, 2)
+
+    if st.button("🔍 Predict Heart Disease"):
+        model, scaler = load_pickle_model("models/heart_model.pkl")
+
+        input_data = np.array([[age,sex,cp,trestbps,chol,fbs,
+                                 restecg,thalach,exang,oldpeak,
+                                 slope,ca,thal]])
+        input_scaled = scaler.transform(input_data)
+        prediction = model.predict(input_scaled)[0]
+
+        # ✅ RESULT PRINTS IMMEDIATELY
+        if prediction == 1:
+            st.error("⚠️ Heart Disease Detected")
+            appointment_booking("Heart Disease")
         else:
-            st.success(st.session_state.result_text)
+            st.success("✅ Heart Disease Not Detected")
 
-        pdf_bytes = create_pdf(
-            username=st.session_state['current_user'],
-            disease=disease_name,
-            result_text=st.session_state.result_text
-        )
+        show_hospitals("Heart Disease")
 
-        st.download_button(
-            "📄 Download PDF Report",
-            pdf_bytes,
-            f"{disease_name}_Report.pdf",
-            "application/pdf"
-        )
+    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page':'Home'}))
 
-        show_hospitals(disease_name)
-
-    st.button("⬅️ Back", on_click=lambda: st.session_state.update({
-        'page': 'Home',
-        'prediction_done': False,
-        'result_text': None
-    }))
-
-
-def heart_inputs():
-    age = st.number_input("Age",0,120,52)
-    sex = st.selectbox("Sex (0=F,1=M)",[0,1])
-    cp = st.number_input("Chest Pain Type",0,3,0)
-    trestbps = st.number_input("BP",80,200,120)
-    chol = st.number_input("Cholesterol",100,600,240)
-    fbs = st.selectbox("FBS > 120",[0,1])
-    restecg = st.number_input("Rest ECG",0,2,1)
-    thalach = st.number_input("Max HR",60,250,150)
-    exang = st.selectbox("Exercise angina",[0,1])
-    oldpeak = st.number_input("ST Depression",0.0,10.0,1.2)
-    slope = st.number_input("Slope ST",0,2,1)
-    ca = st.number_input("Vessels colored",0,3,0)
-    thal = st.number_input("Thalassemia",1,3,2)
-    return [age,sex,cp,trestbps,chol,fbs,restecg,thalach,exang,oldpeak,slope,ca,thal]
 
 def diabetes_inputs():
     preg = st.number_input("Pregnancies",0,20,2)
