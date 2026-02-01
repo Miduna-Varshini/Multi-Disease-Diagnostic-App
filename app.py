@@ -156,19 +156,25 @@ def disease_page(disease_name, model_loader, input_func):
 
             prediction = model.predict(X_scaled)[0]
 
+            # ================= RESULT DISPLAY =================
             if prediction == 1:
                 result_text = f"⚠️ {disease_name} Detected"
-                
-            else:
-                result_text = f"✅ No {disease_name} Detected"
-                
+                st.error(result_text)
 
-            # PDF
+                # Doctor recommendation
+                appointment_booking(disease_name)
+
+            else:
+                result_text = f"✅ {disease_name} Not Detected"
+                st.success(result_text)
+
+            # ================= PDF DOWNLOAD =================
             pdf_bytes = create_pdf(
                 username=st.session_state['current_user'],
                 disease=disease_name,
                 result_text=result_text
             )
+
             st.download_button(
                 "📄 Download PDF Report",
                 pdf_bytes,
@@ -176,12 +182,11 @@ def disease_page(disease_name, model_loader, input_func):
                 "application/pdf"
             )
 
-            # Appointment + Hospitals
-            appointment_booking(disease_name)
+            # ================= HOSPITAL SEARCH =================
             show_hospitals(disease_name)
 
         except Exception as e:
-            st.error("Prediction failed ❌")
+            st.error("❌ Prediction failed")
             st.code(str(e))
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
@@ -239,6 +244,7 @@ def liver_inputs():
     albumin = st.number_input("Albumin",1.0,6.0,3.1)
     ag_ratio = st.number_input("Albumin/Globulin Ratio",0.0,3.0,0.9)
     return [age,gender_val,total_bilirubin,direct_bilirubin,alk_phos,alt,ast,total_proteins,albumin,ag_ratio]
+    
 
 # ===================== BRAIN TUMOR PREDICTION PAGE =====================
 @st.cache_resource
