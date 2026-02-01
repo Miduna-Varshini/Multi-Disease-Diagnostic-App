@@ -147,6 +147,12 @@ def disease_page(disease_name, model_loader, input_func):
 
     inputs = input_func()
 
+    # Initialize state
+    if "result_text" not in st.session_state:
+        st.session_state.result_text = None
+    if "prediction_done" not in st.session_state:
+        st.session_state.prediction_done = False
+
     if st.button("🔍 Predict"):
         try:
             model, scaler = model_loader()
@@ -156,46 +162,53 @@ def disease_page(disease_name, model_loader, input_func):
 
             raw_prediction = model.predict(X_scaled)
 
-            # ===== FIX =====
+            # Handle all model outputs safely
             if isinstance(raw_prediction, np.ndarray):
-                if raw_prediction.ndim > 1:
-                    value = raw_prediction[0][0]
-                else:
-                    value = raw_prediction[0]
+                value = raw_prediction[0][0] if raw_prediction.ndim > 1 else raw_prediction[0]
             else:
                 value = raw_prediction
 
             prediction = 1 if value >= 0.5 else 0
-            # =================
 
             if prediction == 1:
-                result_text = f"⚠️ {disease_name} Detected"
-                st.error(result_text)
-                appointment_booking(disease_name)
+                st.session_state.result_text = f"⚠️ {disease_name} Detected"
             else:
-                result_text = f"✅ {disease_name} Not Detected"
-                st.success(result_text)
+                st.session_state.result_text = f"✅ {disease_name} Not Detected"
 
-            pdf_bytes = create_pdf(
-                username=st.session_state['current_user'],
-                disease=disease_name,
-                result_text=result_text
-            )
-
-            st.download_button(
-                "📄 Download PDF Report",
-                pdf_bytes,
-                f"{disease_name}_Report.pdf",
-                "application/pdf"
-            )
-
-            show_hospitals(disease_name)
+            st.session_state.prediction_done = True
 
         except Exception as e:
             st.error("❌ Prediction failed")
             st.code(str(e))
 
-    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
+    # ================= SHOW RESULT (OUTSIDE BUTTON) =================
+    if st.session_state.prediction_done:
+        if "Detected" in st.session_state.result_text:
+            st.error(st.session_state.result_text)
+            appointment_booking(disease_name)
+        else:
+            st.success(st.session_state.result_text)
+
+        pdf_bytes = create_pdf(
+            username=st.session_state['current_user'],
+            disease=disease_name,
+            result_text=st.session_state.result_text
+        )
+
+        st.download_button(
+            "📄 Download PDF Report",
+            pdf_bytes,
+            f"{disease_name}_Report.pdf",
+            "application/pdf"
+        )
+
+        show_hospitals(disease_name)
+
+    st.button("⬅️ Back", on_click=lambda: st.session_state.update({
+        'page': 'Home',
+        'prediction_done': False,
+        'result_text': None
+    }))
 
 
 def heart_inputs():
