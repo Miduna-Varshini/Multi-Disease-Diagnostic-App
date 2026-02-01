@@ -409,6 +409,7 @@ elif st.session_state['page'] == 'Login':
 elif st.session_state['page'] == 'Home':
     home_dashboard()
 elif st.session_state['page']=="Heart":
+    heart_page()
     disease_page("Heart Disease", lambda: load_pickle_model("models/heart_model.pkl"), heart_inputs)
 elif st.session_state['page']=="Diabetes":
     disease_page("Diabetes", lambda: load_pickle_model("models/diabetes_model.pkl"), diabetes_inputs)
