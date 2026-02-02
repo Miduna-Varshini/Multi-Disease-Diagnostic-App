@@ -380,19 +380,44 @@ def speech_to_text_page():
 # ===================== MAIN =====================
 if st.session_state['page'] == 'Signup':
     signup()
+
 elif st.session_state['page'] == 'Login':
     login()
+
 elif st.session_state['page'] == 'Home':
     home_dashboard()
-elif st.session_state['page']=="Heart":
-    disease_page("Heart Disease", lambda: load_pickle_model("models/heart_model.pkl"), heart_inputs)
-elif st.session_state['page']=="Diabetes":
-    disease_page("Diabetes", lambda: load_pickle_model("models/diabetes_model.pkl"), diabetes_inputs)
-elif st.session_state['page']=="Kidney":
-    disease_page("Kidney Disease", lambda: load_pickle_model("models/kidney_10f_model.pkl"), kidney_inputs)
-elif st.session_state['page']=="Liver":
-    disease_page("Liver Disease", lambda: load_pickle_model("models/liver_model.pkl"), liver_inputs)
+
+elif st.session_state['page'] == "Heart":
+    disease_page(
+        "Heart Disease",
+        lambda: load_pickle_model("models/heart_model.pkl"),
+        heart_inputs
+    )
+
+elif st.session_state['page'] == "Diabetes":
+    disease_page(
+        "Diabetes",
+        lambda: load_pickle_model("models/diabetes_model.pkl"),
+        diabetes_inputs
+    )
+
+elif st.session_state['page'] == "Kidney":
+    disease_page(
+        "Kidney Disease",
+        lambda: load_pickle_model("models/kidney_10f_model.pkl"),
+        kidney_inputs
+    )
+
+elif st.session_state['page'] == "Liver":
+    disease_page(
+        "Liver Disease",
+        lambda: load_pickle_model("models/liver_model.pkl"),
+        liver_inputs
+    )
+
 elif st.session_state['page'] == "Brain":
     brain_tumor_page()
-elif st.session_state['page']=="Speech":
+
+elif st.session_state['page'] == "Speech":
     speech_to_text_page()
+
