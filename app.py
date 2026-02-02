@@ -140,51 +140,8 @@ def home_dashboard():
         st.session_state['page'] = 'Login'
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ===================== DISEASE INPUTS =====================
-# ===================== GENERIC DISEASE PAGE =====================
-def disease_page(disease_name, model_loader, input_func):
-    st.header(f"🧪 {disease_name} Prediction")
+# ===================== DISEASE INPUTS ===================== #
 
-    inputs = input_func()
-
-    if st.button("🔍 Predict"):
-        try:
-            model, scaler = model_loader()
-
-            X = np.array(inputs).reshape(1, -1)
-            X_scaled = scaler.transform(X)
-
-            prediction = model.predict(X_scaled)[0]
-
-            if prediction == 1:
-                result_text = f"⚠️ {disease_name} Detected"
-                
-            else:
-                result_text = f"✅ No {disease_name} Detected"
-                
-
-            # PDF
-            pdf_bytes = create_pdf(
-                username=st.session_state['current_user'],
-                disease=disease_name,
-                result_text=result_text
-            )
-            st.download_button(
-                "📄 Download PDF Report",
-                pdf_bytes,
-                f"{disease_name}_Report.pdf",
-                "application/pdf"
-            )
-
-            # Appointment + Hospitals
-            appointment_booking(disease_name)
-            show_hospitals(disease_name)
-
-        except Exception as e:
-            st.error("Prediction failed ❌")
-            st.code(str(e))
-
-    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
 
 def heart_inputs():
     age = st.number_input("Age",0,120,52)
@@ -316,6 +273,50 @@ def brain_tumor_page():
             show_hospitals("Brain Tumor")
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
+# ===================== GENERIC DISEASE PAGE =====================
+def disease_page(disease_name, model_loader, input_func):
+    st.header(f"🧪 {disease_name} Prediction")
+
+    inputs = input_func()
+
+    if st.button("🔍 Predict"):
+        try:
+            model, scaler = model_loader()
+
+            X = np.array(inputs).reshape(1, -1)
+            X_scaled = scaler.transform(X)
+
+            prediction = model.predict(X_scaled)[0]
+
+            if prediction == 1:
+                result_text = f"⚠️ {disease_name} Detected"
+                
+            else:
+                result_text = f"✅ No {disease_name} Detected"
+                
+
+            # PDF
+            pdf_bytes = create_pdf(
+                username=st.session_state['current_user'],
+                disease=disease_name,
+                result_text=result_text
+            )
+            st.download_button(
+                "📄 Download PDF Report",
+                pdf_bytes,
+                f"{disease_name}_Report.pdf",
+                "application/pdf"
+            )
+
+            # Appointment + Hospitals
+            appointment_booking(disease_name)
+            show_hospitals(disease_name)
+
+        except Exception as e:
+            st.error("Prediction failed ❌")
+            st.code(str(e))
+
+    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))    
 
 # ===================== APPOINTMENTS =====================
 def appointment_booking(disease):
