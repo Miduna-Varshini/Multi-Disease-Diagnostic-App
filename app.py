@@ -186,45 +186,21 @@ def disease_page(disease_name, model_loader, input_func):
 
     st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page': 'Home'}))
 
-
-
-def heart_page():
-    st.header("❤️ Heart Disease Prediction")
-
-    age = st.number_input("Age", 0, 120, 52)
-    sex = st.selectbox("Sex (0=Female, 1=Male)", [0,1])
-    cp = st.number_input("Chest Pain Type", 0, 3, 0)
-    trestbps = st.number_input("Blood Pressure", 80, 200, 120)
-    chol = st.number_input("Cholesterol", 100, 600, 240)
-    fbs = st.selectbox("FBS > 120", [0,1])
-    restecg = st.number_input("Rest ECG", 0, 2, 1)
-    thalach = st.number_input("Max Heart Rate", 60, 250, 150)
-    exang = st.selectbox("Exercise Angina", [0,1])
-    oldpeak = st.number_input("ST Depression", 0.0, 10.0, 1.2)
-    slope = st.number_input("Slope", 0, 2, 1)
-    ca = st.number_input("Vessels Colored", 0, 3, 0)
-    thal = st.number_input("Thalassemia", 1, 3, 2)
-
-    if st.button("🔍 Predict Heart Disease"):
-        model, scaler = load_pickle_model("models/heart_model.pkl")
-
-        input_data = np.array([[age,sex,cp,trestbps,chol,fbs,
-                                 restecg,thalach,exang,oldpeak,
-                                 slope,ca,thal]])
-        input_scaled = scaler.transform(input_data)
-        prediction = model.predict(input_scaled)[0]
-
-        # ✅ RESULT PRINTS IMMEDIATELY
-        if prediction == 1:
-            st.error("⚠️ Heart Disease Detected")
-            appointment_booking("Heart Disease")
-        else:
-            st.success("✅ Heart Disease Not Detected")
-
-        show_hospitals("Heart Disease")
-
-    st.button("⬅️ Back", on_click=lambda: st.session_state.update({'page':'Home'}))
-
+def heart_inputs():
+    age = st.number_input("Age",0,120,52)
+    sex = st.selectbox("Sex (0=F,1=M)",[0,1])
+    cp = st.number_input("Chest Pain Type",0,3,0)
+    trestbps = st.number_input("BP",80,200,120)
+    chol = st.number_input("Cholesterol",100,600,240)
+    fbs = st.selectbox("FBS > 120",[0,1])
+    restecg = st.number_input("Rest ECG",0,2,1)
+    thalach = st.number_input("Max HR",60,250,150)
+    exang = st.selectbox("Exercise angina",[0,1])
+    oldpeak = st.number_input("ST Depression",0.0,10.0,1.2)
+    slope = st.number_input("Slope ST",0,2,1)
+    ca = st.number_input("Vessels colored",0,3,0)
+    thal = st.number_input("Thalassemia",1,3,2)
+    return [age,sex,cp,trestbps,chol,fbs,restecg,thalach,exang,oldpeak,slope,ca,thal]
 
 def diabetes_inputs():
     preg = st.number_input("Pregnancies",0,20,2)
@@ -263,7 +239,6 @@ def liver_inputs():
     albumin = st.number_input("Albumin",1.0,6.0,3.1)
     ag_ratio = st.number_input("Albumin/Globulin Ratio",0.0,3.0,0.9)
     return [age,gender_val,total_bilirubin,direct_bilirubin,alk_phos,alt,ast,total_proteins,albumin,ag_ratio]
-    
 
 # ===================== BRAIN TUMOR PREDICTION PAGE =====================
 @st.cache_resource
@@ -409,7 +384,6 @@ elif st.session_state['page'] == 'Login':
 elif st.session_state['page'] == 'Home':
     home_dashboard()
 elif st.session_state['page']=="Heart":
-    heart_page()
     disease_page("Heart Disease", lambda: load_pickle_model("models/heart_model.pkl"), heart_inputs)
 elif st.session_state['page']=="Diabetes":
     disease_page("Diabetes", lambda: load_pickle_model("models/diabetes_model.pkl"), diabetes_inputs)
